@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+.env.*
+*.log
+.DS_Store
+.wrangler/
+memory/.flush-log.md
+clients/**/assets/*.psd
+*.sarif
+*.jsonl
+leads.json
+playwright-report/
+
+# generated outputs
+prospect-briefs/

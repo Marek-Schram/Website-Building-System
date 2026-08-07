@@ -1,0 +1,6 @@
+{ "$comment":"Free MCP, ~5-6. See docs/TOOLING.md.","mcpServers":{
+  "context7":{"command":"npx","args":["-y","@upstash/context7-mcp"],"$why":"live docs"},
+  "playwright":{"command":"npx","args":["-y","@playwright/mcp@latest"],"$why":"browser QA/E2E + parity/opportunity screenshots"},
+  "filesystem":{"command":"npx","args":["-y","@modelcontextprotocol/server-filesystem","./clients","./memory","./packages","./demos","./parity","./opportunities"],"$why":"scoped files"},
+  "fetch":{"command":"npx","args":["-y","@modelcontextprotocol/server-fetch"],"$why":"URL→markdown (captures/scans sites)"},
+  "sequential-thinking":{"command":"npx","args":["-y","@modelcontextprotocol/server-sequential-thinking"],"$why":"reasoning"} } }

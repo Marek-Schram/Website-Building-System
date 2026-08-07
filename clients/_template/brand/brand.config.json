@@ -1,0 +1,7 @@
+{ "businessName":"REPLACE","tagline":"REPLACE","theme":"beacon","industry":"default",
+  "brand":{"colors":{"primary":"#1d4ed8","secondary":"#0f172a","accent":"#0369a1"},"font":{"heading":"Inter","body":"Inter"},"logo":"assets/logo.svg"},
+  "contact":{"phone":"REPLACE","email":"REPLACE","address":"REPLACE","hours":"Mon-Fri 9-5"},
+  "features":{"contactForm":true,"booking":false,"payments":false,"store":false},"addons":[],
+  "parityBaseline":"","opportunityReport":"",
+  "marketing":{"googleBusinessProfile":true,"socialLinks":{"instagram":"","facebook":"","youtube":""}},
+  "deploy":{"host":"cloudflare-pages","domain":""} }

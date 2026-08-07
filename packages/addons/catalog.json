@@ -1,0 +1,110 @@
+{
+  "$comment": "native=built | embed=business provider.",
+  "addons": [
+    {
+      "id": "contact-form",
+      "type": "native"
+    },
+    {
+      "id": "map",
+      "type": "native"
+    },
+    {
+      "id": "hours",
+      "type": "native"
+    },
+    {
+      "id": "reviews",
+      "type": "native"
+    },
+    {
+      "id": "gallery",
+      "type": "native"
+    },
+    {
+      "id": "faq",
+      "type": "native"
+    },
+    {
+      "id": "social",
+      "type": "native"
+    },
+    {
+      "id": "click-to-call",
+      "type": "native"
+    },
+    {
+      "id": "menu",
+      "type": "native"
+    },
+    {
+      "id": "online-ordering",
+      "type": "embed",
+      "providers": [
+        "Toast",
+        "Square",
+        "ChowNow",
+        "Ontabee"
+      ]
+    },
+    {
+      "id": "reservations",
+      "type": "embed",
+      "providers": [
+        "OpenTable",
+        "Resy",
+        "Tock"
+      ]
+    },
+    {
+      "id": "booking",
+      "type": "embed",
+      "providers": [
+        "Calendly",
+        "SimplyBook.me",
+        "Square Appointments"
+      ]
+    },
+    {
+      "id": "newsletter",
+      "type": "embed",
+      "providers": [
+        "Brevo",
+        "EmailOctopus"
+      ]
+    },
+    {
+      "id": "whatsapp",
+      "type": "embed"
+    },
+    {
+      "id": "live-chat",
+      "type": "embed",
+      "providers": [
+        "tawk.to",
+        "Crisp"
+      ]
+    },
+    {
+      "id": "payments",
+      "type": "embed",
+      "providers": [
+        "Stripe",
+        "Snipcart",
+        "Paddle"
+      ]
+    },
+    {
+      "id": "store",
+      "type": "embed",
+      "providers": [
+        "Snipcart"
+      ]
+    },
+    {
+      "id": "chatbot",
+      "type": "native",
+      "note": "Rule-based FAQ widget (free). Optional AI via Cloudflare Workers AI (free 10k neurons/day)."
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+name: Tests
+on:
+  push: { branches: [main], paths: ['clients/**','packages/**','demos/**'] }
+  pull_request: { branches: [main], paths: ['clients/**','packages/**','demos/**'] }
+  workflow_dispatch: {}
+permissions: { contents: read }
+jobs:
+  functional-and-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - name: Human-like test on demos
+        run: |
+          shopt -s nullglob; fail=0
+          for f in demos/*/index.html; do node packages/testing/harness/human-test.mjs "$f" || fail=1; done
+          [ "$fail" = "0" ] || { echo "::error::demo failed"; exit 1; }
+      - name: Unit (if vitest)
+        run: if [ -f node_modules/.bin/vitest ]; then npx vitest run; else echo "vitest not installed"; fi
+      - name: Dead-code (Knip)
+        run: npx --yes knip --no-progress || echo "::warning::knip"

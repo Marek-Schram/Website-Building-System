@@ -1,0 +1,4 @@
+{ "$schema":"https://unpkg.com/knip@5/schema.json",
+  "entry":["scripts/*.mjs","packages/*/src/*.mjs","packages/testing/harness/*.mjs","packages/testing/e2e/*.spec.mjs","packages/testing/unit/*.test.mjs"],
+  "project":["packages/**/*.mjs","scripts/**/*.mjs"],
+  "ignoreBinaries":["wrangler"] }

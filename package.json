@@ -1,0 +1,35 @@
+{
+  "name": "sitewright",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Claude Code base project: find clients, diagnose their current site, build one emailable prospect brief, and deliver cheap/fast/secure small-business sites with common add-ons (incl. a free chatbot), website-parity, tests, and a free-marketing toolkit.",
+  "scripts": {
+    "new": "node scripts/new-client.mjs",
+    "build:client": "node scripts/build-client.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "audit": "node packages/audit/src/audit.mjs",
+    "find-leads": "node packages/prospecting/src/find-leads.mjs",
+    "demo": "node packages/demo-gen/src/demo.mjs",
+    "addon": "node packages/addons/src/addons.mjs",
+    "capture": "node packages/parity/src/capture.mjs",
+    "parity": "node packages/parity/src/parity-check.mjs",
+    "opportunities": "node packages/opportunities/src/opportunities.mjs",
+    "test": "node packages/testing/harness/run-all.mjs",
+    "test:human": "node packages/testing/harness/human-test.mjs",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test packages/testing/e2e",
+    "deadcode": "knip",
+    "brief": "node packages/prospect-brief/src/brief.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "@axe-core/playwright": "^4.10.0",
+    "vitest": "^3.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "knip": "^5.0.0"
+  }
+}

@@ -1,0 +1,2 @@
+import { defineConfig, devices } from '@playwright/test';
+export default defineConfig({ testDir:'./packages/testing/e2e', timeout:30000, expect:{timeout:5000}, fullyParallel:true, retries:process.env.CI?1:0, reporter:[['list'],['html',{open:'never'}]], use:{ baseURL:process.env.SITE_URL||'http://localhost:4321', screenshot:'only-on-failure', trace:'on-first-retry' }, projects:[{name:'chromium',use:{...devices['Desktop Chrome']}},{name:'mobile',use:{...devices['iPhone 13'],defaultBrowserType:'chromium'}}] });

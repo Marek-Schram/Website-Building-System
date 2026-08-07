@@ -1,0 +1,63 @@
+{
+  "source": "https://example.com",
+  "business": "Example Domain",
+  "industry": "plumber",
+  "generatedAt": "2026-08-07T22:22:29.046Z",
+  "opportunityScore": 60,
+  "counts": {
+    "high": 0,
+    "medium": 6,
+    "low": 0
+  },
+  "present": [],
+  "opportunities": [
+    {
+      "severity": "medium",
+      "category": "functionality",
+      "id": "missing-click-to-call",
+      "finding": "No click to call on the current site.",
+      "impact": "Emergencies mean instant calls — a sticky call button converts.",
+      "fix": "Add the “click-to-call” feature (SiteWright add-on) — I can drop it in."
+    },
+    {
+      "severity": "medium",
+      "category": "functionality",
+      "id": "missing-contact-form",
+      "finding": "No contact form on the current site.",
+      "impact": "Capture quote requests 24/7.",
+      "fix": "Add the “contact-form” feature (SiteWright add-on) — I can drop it in."
+    },
+    {
+      "severity": "medium",
+      "category": "functionality",
+      "id": "missing-reviews",
+      "finding": "No reviews on the current site.",
+      "impact": "Trust for letting someone into your home.",
+      "fix": "Add the “reviews” feature (SiteWright add-on) — I can drop it in."
+    },
+    {
+      "severity": "medium",
+      "category": "functionality",
+      "id": "missing-faq",
+      "finding": "No faq on the current site.",
+      "impact": "Answer \"do you do X\" and reduce time-wasters.",
+      "fix": "Add the “faq” feature (SiteWright add-on) — I can drop it in."
+    },
+    {
+      "severity": "medium",
+      "category": "technical",
+      "id": "headers",
+      "finding": "Missing 4 security headers.",
+      "impact": "Leaves the site more exposed to common attacks and browser warnings.",
+      "fix": "Add the standard security headers (free) during the rebuild."
+    },
+    {
+      "severity": "medium",
+      "category": "seo",
+      "id": "no-meta",
+      "finding": "No meta description.",
+      "impact": "Google shows random text under your link instead of a compelling summary.",
+      "fix": "Write meta descriptions that earn the click."
+    }
+  ]
+}
