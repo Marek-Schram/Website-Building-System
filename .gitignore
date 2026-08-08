@@ -11,6 +11,9 @@ clients/**/assets/*.psd
 *.jsonl
 leads.json
 playwright-report/
+test-results/
 
 # generated outputs
 prospect-briefs/
+opportunities/*/
+!opportunities/example-domain/

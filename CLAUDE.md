@@ -33,7 +33,8 @@ fixing/debugging** and explain it plainly.
 ```
 CLAUDE.md · SETUP.md · README.md · .mcp.json · .github/workflows/
 .claude/{agents,skills,rules,hooks,settings.json}
-packages/components/  ← shared UI blocks   packages/themes/  ← portfolio
+packages/site-builder/ ← assembles brand+content+theme+add-ons → REAL client site → /build-site
+packages/components/  ← shared UI reference   packages/themes/  ← portfolio (colors/fonts/sections)
 packages/addons/      ← common add-ons (ordering, booking, menu…) → /add-feature
 packages/parity/      ← capture an old site + prove parity → /match-site
 packages/opportunities/ ← detect weak points on a prospect's site → /find-opportunities
@@ -44,10 +45,11 @@ clients/  demos/  parity/  opportunities/  memory/  marketing-toolkit/  scripts/
 ```
 
 ## Tech stack
-Astro (static→hybrid) · Tailwind · Cloudflare Pages (#1 security: free DDoS+WAF, auto-SSL). Client engine:
-Google Places + PageSpeed (free tiers). Add-ons: native HTML or provider embeds. Demos, add-ons, parity
-capture, and opportunity scans need NO keys (PageSpeed key optional for speed numbers). Payments later:
-Stripe/Snipcart/Paddle.
+Static HTML/CSS/JS, zero build step (packages/site-builder assembles brand+content+theme+add-ons into
+plain HTML — no framework/toolchain, so it stays fast, cheap, and directly testable) · Cloudflare Pages
+(#1 security: free DDoS+WAF, auto-SSL). Client engine: Google Places + PageSpeed (free tiers). Add-ons:
+native HTML or provider embeds. Demos, add-ons, parity capture, and opportunity scans need NO keys
+(PageSpeed key optional for speed numbers). Payments later: Stripe/Snipcart/Paddle.
 
 **Revenue ladder:** brochure → + contact form → + booking → + payments → + store. Add-ons make each rung fast.
 
@@ -58,7 +60,7 @@ fix) → `/audit-site` → outreach the top weak points.
 
 ### B) Deliver a site (per won client)
 1. `/new-client "<slug>"` — scaffold + materials + theme.
-2. `/build-site <slug>` — assemble from components + theme.
+2. `/build-site <slug>` — assemble brand.config + content/*.md + theme + add-ons → dist/<slug> (site-builder).
 3. `/add-feature <id>` — drop in requested features from the add-ons library.
 4. `/test-site <slug>` — human-like + E2E + unit + dead-code; `qa-debugger` fixes failures.
 5. `/security-gate <slug>` — reviewer patches + pentester breaks in, until clean.
