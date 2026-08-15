@@ -1,0 +1,10 @@
+{
+  "$comment": "Top-5 booking platforms used for presence checks and listing deliverables.",
+  "platforms": [
+    {"id": "airbnb",       "label": "Airbnb",       "domains": ["airbnb.com", "airbnb.ca", "airbnb.com.au", "airbnb.co.uk"]},
+    {"id": "vrbo",         "label": "Vrbo",         "domains": ["vrbo.com", "vrbo.ca", "homeaway.com"]},
+    {"id": "booking.com",  "label": "Booking.com",  "domains": ["booking.com"]},
+    {"id": "expedia",      "label": "Expedia",      "domains": ["expedia.com", "expedia.ca", "expedia.co.uk"]},
+    {"id": "hotels.com",   "label": "Hotels.com",   "domains": ["hotels.com", "hotels.ca", "hotels.co.uk"]}
+  ]
+}
