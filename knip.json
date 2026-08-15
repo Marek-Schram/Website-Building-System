@@ -1,4 +1,4 @@
 { "$schema":"https://unpkg.com/knip@5/schema.json",
-  "entry":["scripts/*.mjs","packages/*/src/*.mjs","packages/testing/harness/*.mjs","packages/testing/e2e/*.spec.mjs","packages/testing/unit/*.test.mjs"],
-  "project":["packages/**/*.mjs","scripts/**/*.mjs"],
+  "entry":["scripts/*.mjs","packages/*/src/*.mjs","packages/testing/harness/*.mjs","packages/testing/e2e/*.spec.mjs","packages/testing/unit/*.test.mjs","command-center/public/app.js"],
+  "project":["packages/**/*.mjs","scripts/**/*.mjs","command-center/server/**/*.mjs","command-center/public/**/*.js"],
   "ignoreBinaries":["wrangler"] }

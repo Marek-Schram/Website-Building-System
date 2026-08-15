@@ -42,6 +42,7 @@ packages/prospect-brief/ ← one emailable doc: opportunities+audit+demo → /pr
 packages/security/    packages/audit/ → /audit-site   packages/prospecting/ → /find-leads
 packages/demo-gen/ → /demo-site   packages/testing/ → /test-site, /blind-review
 packages/lodging-prospects/ → /find-booking-leads   packages/proposals/ → /propose-lodging   packages/listing-kit/ → /listing-kit
+command-center/ ← local GUI: one pipeline board driving every skill above → `npm run command-center`
 clients/  demos/  parity/  opportunities/  memory/  marketing-toolkit/  scripts/  docs/
 ```
 

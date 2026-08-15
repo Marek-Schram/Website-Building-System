@@ -26,6 +26,8 @@ an AI security + QA team that fixes its own findings, automated CI, and persiste
 | `packages/parity/` | Capture an old site + prove parity → `/match-site` |
 | `packages/testing/` | Human-like + E2E + unit + dead-code → `/test-site`, `/blind-review` |
 | `packages/site-builder/` | Assembles a REAL client site from brand+content+theme+add-ons → `/build-site` |
+| `packages/lodging-prospects/`, `packages/proposals/`, `packages/listing-kit/` | Booking line of business: find who's missing from Airbnb/Vrbo/etc. → proposal → onboarding kit |
+| `command-center/` | Local GUI — one pipeline board (find → pitch → win → deliver → paid) driving every skill above → `npm run command-center` |
 | `.claude/agents/` | security-reviewer, pentester, visual-qa, qa-debugger, blind-reviewer, parity-reviewer, **opportunity-scout** |
 | `.claude/{skills,rules,hooks,settings.json}` | 15 skills + rules + deterministic guards |
 | `.mcp.json` · `.github/workflows/` | free MCP servers · automated CI |
@@ -34,8 +36,10 @@ an AI security + QA team that fixes its own findings, automated CI, and persiste
 | `memory/` · `marketing-toolkit/` · `docs/` | brain · deliverables · 16 guides |
 
 ## Tech
-Astro (static→hybrid) · Tailwind · Cloudflare Pages (WAF+DDoS+SSL) · Google Places + PageSpeed · self-contained
+Static HTML/CSS/JS, zero build step · Cloudflare Pages (WAF+DDoS+SSL) · Google Places + PageSpeed · self-contained
 HTML demos + add-ons · parity capture + opportunity detector (no keys) · optional Stripe/Snipcart/Toast/Calendly.
+Command Center: local Express + SQLite, plain JS frontend — no framework there either.
 
 ---
-*Scaffold for Claude Code. The audit, lead-finder, demo, add-ons, site-builder, testing, parity, and opportunity scripts are real and runnable.*
+*Scaffold for Claude Code. The audit, lead-finder, demo, add-ons, site-builder, testing, parity, opportunity,
+lodging, and command-center pieces are real and runnable.*
