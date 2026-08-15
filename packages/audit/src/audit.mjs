@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Instant Audit. Usage: audit.mjs <url> [--json|--md]
+import '../../../env.mjs';
 const args=process.argv.slice(2),u=args.find(a=>!a.startsWith('--')),asJson=args.includes('--json'),asMd=args.includes('--md');
 if(!u){console.error('Usage: audit.mjs <url> [--json|--md]');process.exit(1);}
 const target=(/^https?:\/\//i.test(u)?u:'https://'+u).replace(/\/+$/,'');const KEY=process.env.PAGESPEED_API_KEY||'';
