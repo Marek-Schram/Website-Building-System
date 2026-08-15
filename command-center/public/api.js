@@ -58,6 +58,19 @@ export const api = {
   flagSecurityGate: id => req('POST', `/deals/${id}/security-gate/flag`),
   clearSecurityGate: id => req('POST', `/deals/${id}/security-gate/clear`),
   deploy: id => req('POST', `/deals/${id}/deploy`),
+
+  captureOldSite: id => req('POST', `/deals/${id}/capture-old-site`),
+  runParityCheck: id => req('POST', `/deals/${id}/run-parity-check`),
+
+  flagMarketingKit: id => req('POST', `/deals/${id}/marketing-kit/flag`),
+  checkMarketingKit: id => req('POST', `/deals/${id}/marketing-kit/check`),
+  marketingKitFiles: id => req('GET', `/deals/${id}/marketing-kit/files`),
+
+  generateInvoice: (id, body) => req('POST', `/deals/${id}/invoice/generate`, body),
+  markInvoiceSent: id => req('POST', `/deals/${id}/invoice/mark-sent`),
+  markInvoicePaid: id => req('POST', `/deals/${id}/invoice/mark-paid`),
+
+  followUps: () => req('GET', '/follow-ups'),
 };
 
 // Watches a job's SSE stream. onLine(text) for each line, onDone({status, code}) at the end.

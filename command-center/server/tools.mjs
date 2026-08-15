@@ -111,4 +111,7 @@ export const SCRIPTS = {
   findBookingLeads: resolve(ROOT, 'packages/lodging-prospects/src/find-booking-leads.mjs'),
   proposeLodging: resolve(ROOT, 'packages/proposals/src/proposal.mjs'),
   listingKit: resolve(ROOT, 'packages/listing-kit/src/kit.mjs'),
+  captureOldSite: resolve(ROOT, 'packages/parity/src/capture.mjs'),
+  parityCheck: resolve(ROOT, 'packages/parity/src/parity-check.mjs'),
+  invoice: resolve(ROOT, 'packages/invoicing/src/invoice.mjs'),
 };

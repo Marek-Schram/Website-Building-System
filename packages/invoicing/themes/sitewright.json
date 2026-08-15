@@ -1,0 +1,22 @@
+{
+  "$comment": "SiteWright brand + invoice theme (website-line clients). EDIT THIS ONE FILE to rebrand invoices.",
+  "brand": {
+    "name": "SiteWright",
+    "tagline": "Fast, trustworthy websites for local businesses.",
+    "email": "pixelreach.digital.ceo@gmail.com",
+    "phone": "618-567-1764",
+    "website": "pixelreach.digital"
+  },
+  "colors": {
+    "primary": "#1d4ed8",
+    "primaryDark": "#1e40af",
+    "accent": "#3b82f6",
+    "bg": "#ffffff",
+    "ink": "#0f172a",
+    "muted": "#475569",
+    "lightBg": "#eff6ff",
+    "border": "#bfdbfe"
+  },
+  "paymentInstructions": "Pay by check, Venmo, or bank transfer — reply to this invoice for details.",
+  "terms": "Due within 14 days of the date above. Thanks for the business!"
+}

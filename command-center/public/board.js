@@ -45,6 +45,7 @@ export async function renderBoard(root, { onOpenDeal, onLogout }) {
       </div>
       <div class="spacer"></div>
       <div class="topbar-actions">
+        <button class="btn sm" id="btn-followups">Follow-ups<span class="badge-count" id="followup-badge" hidden></span></button>
         <button class="btn sm" id="btn-import">Import leads</button>
         <button class="btn sm" id="btn-add">+ Add lead</button>
         <button class="btn sm" id="btn-logout">Sign out</button>
@@ -56,6 +57,8 @@ export async function renderBoard(root, { onOpenDeal, onLogout }) {
   document.getElementById('btn-logout').addEventListener('click', async () => { await api.logout(); onLogout(); });
   document.getElementById('btn-add').addEventListener('click', () => openAddLeadModal(reload));
   document.getElementById('btn-import').addEventListener('click', () => openImportModal(reload));
+  document.getElementById('btn-followups').addEventListener('click', () => openFollowUpsPanel(onOpenDeal));
+  refreshFollowUpBadge();
   document.getElementById('line-tabs').addEventListener('click', e => {
     const btn = e.target.closest('button[data-line]');
     if (!btn) return;
@@ -67,9 +70,42 @@ export async function renderBoard(root, { onOpenDeal, onLogout }) {
   async function reload() {
     const deals = await api.listDeals({ businessLine: currentFilter.businessLine });
     renderColumns(deals, onOpenDeal);
+    refreshFollowUpBadge();
   }
   await reload();
   return { reload };
+}
+
+async function refreshFollowUpBadge() {
+  const badge = document.getElementById('followup-badge');
+  if (!badge) return;
+  try {
+    const { overdue } = await api.followUps();
+    if (overdue.length) { badge.textContent = overdue.length; badge.hidden = false; }
+    else badge.hidden = true;
+  } catch { /* badge is cosmetic — a failed fetch just leaves it hidden */ }
+}
+
+function openFollowUpsPanel(onOpenDeal) {
+  const wrap = el(`<div class="modal-wrap"><div class="modal" style="max-width:460px;max-height:80vh;overflow-y:auto"><h3>Follow-ups</h3><div id="fu-body">Loading…</div></div></div>`);
+  document.body.appendChild(wrap);
+  wrap.addEventListener('click', e => { if (e.target === wrap) wrap.remove(); });
+  const body = wrap.querySelector('#fu-body');
+
+  function group(label, deals, warn) {
+    if (!deals.length) return '';
+    return `<div class="section-title" style="margin-top:1rem">${label} (${deals.length})</div>` + deals.map(d => `
+      <button type="button" class="filelink fu-row" data-id="${d.id}" style="width:100%;text-align:left;cursor:pointer;border:1px solid var(--line);${warn ? 'border-color:var(--crit)' : ''}">
+        <span><span class="chip line-${d.business_line}">${d.business_line === 'lodging' ? 'Lodging' : 'Website'}</span> ${esc(d.name)}</span>
+        <span style="${warn ? 'color:var(--crit)' : ''};font-family:var(--mono);font-size:.78rem">${esc(d.follow_up_date)}</span>
+      </button>`).join('');
+  }
+
+  api.followUps().then(({ overdue, upcoming, later }) => {
+    if (!overdue.length && !upcoming.length && !later.length) { body.innerHTML = `<p class="hint" style="margin:0">No deals have a follow-up date set.</p>`; return; }
+    body.innerHTML = group('Overdue', overdue, true) + group('Next 14 days', upcoming, false) + group('Later', later, false);
+    body.querySelectorAll('.fu-row').forEach(btn => btn.addEventListener('click', () => { wrap.remove(); onOpenDeal(Number(btn.dataset.id)); }));
+  }).catch(err => { body.innerHTML = ''; body.appendChild(el(`<p class="hint">${esc(err.message)}</p>`)); });
 }
 
 function renderColumns(deals, onOpenDeal) {

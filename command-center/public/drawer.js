@@ -46,11 +46,14 @@ export async function openDrawer(dealId, { onClose, onChanged }) {
     const body = drawer.querySelector('#drawer-body');
     body.appendChild(renderFieldsForm(deal, refresh));
     if (deal.business_line === 'lodging') body.appendChild(renderPresenceSection(deal));
+    if (deal.business_line === 'website' && deal.website) body.appendChild(renderParitySection(deal, refresh));
     body.appendChild(renderFiles(deal));
     body.appendChild(renderActions(deal, refresh));
     // Add-ons apply to a real clients/<slug> folder, which only website deals have — a lodging deal can
     // carry a client_slug too (set when its listing kit is generated), so gate on business_line as well.
     if (deal.business_line === 'website' && deal.client_slug) body.appendChild(renderAddonsSection(deal, refresh));
+    if (['won', 'delivered', 'invoiced'].includes(deal.stage)) body.appendChild(renderInvoiceSection(deal, refresh));
+    body.appendChild(renderMarketingKitSection(deal, refresh));
     body.appendChild(renderActivity(deal, refresh));
     const delRow = el(`<div class="divider"></div>`);
     body.appendChild(delRow);
@@ -119,15 +122,198 @@ function renderPresenceSection(deal) {
   return wrap;
 }
 
+// Runs a one-shot action button that may kick off a background job; toasts + refreshes when it's done.
+// Used by sections that don't have a shared console box (parity, invoicing, marketing kit).
+async function runSimpleAction(btn, fn, refresh) {
+  btn.disabled = true;
+  const orig = btn.textContent;
+  try {
+    const result = await fn();
+    if (result?.jobId) {
+      btn.textContent = 'Running…';
+      await new Promise(resolveJob => watchJob(result.jobId, {
+        onDone: msg => {
+          toast(msg.status === 'done' ? `${orig} finished` : `${orig} failed — see activity log`, { error: msg.status !== 'done' });
+          resolveJob();
+        },
+      }));
+    } else {
+      toast(result?.found === false ? 'Not found yet' : `${orig} done`);
+    }
+    refresh();
+  } catch (err) {
+    toast(err.message, { error: true });
+  } finally {
+    btn.disabled = false; btn.textContent = orig;
+  }
+}
+
+// ---------- parity check (rebuilds — prove nothing was lost vs. the old site) ----------
+
+function renderParitySection(deal, refresh) {
+  const wrap = el(`<div></div>`);
+  wrap.appendChild(el(`<div class="section-title">Parity vs. old site</div>`));
+  if (!deal.parity_baseline_path) {
+    wrap.appendChild(el(`<p class="hint" style="margin:0 0 .5rem">Capture the current site at ${esc(deal.website)} before rebuilding, so the check can prove nothing gets lost.</p>`));
+    const btn = el(`<button class="btn sm">Capture old site</button>`);
+    btn.addEventListener('click', () => runSimpleAction(btn, () => api.captureOldSite(deal.id), refresh));
+    wrap.appendChild(btn);
+    return wrap;
+  }
+  const row = el(`<div class="action-row" style="margin-bottom:.4rem"></div>`);
+  const runBtn = el(`<button class="btn sm">Run parity check</button>`);
+  runBtn.addEventListener('click', () => runSimpleAction(runBtn, () => api.runParityCheck(deal.id), refresh));
+  row.appendChild(runBtn);
+  wrap.appendChild(row);
+  if (deal.parity_status) {
+    let result = {};
+    try { result = deal.parity_result ? JSON.parse(deal.parity_result) : {}; } catch { /* stale data — show nothing rather than break the drawer */ }
+    const pass = deal.parity_status === 'pass';
+    wrap.appendChild(el(`<div class="chip ${pass ? 'plain' : 'flag'}" style="display:inline-block;margin-bottom:.4rem">${pass ? `✓ Parity pass — ${result.improvements?.length || 0} improvement(s)` : `✗ ${result.regressions?.length || 0} regression(s)`}</div>`));
+    if (!pass && result.regressions?.length) wrap.appendChild(el(`<p class="hint" style="margin:0 0 .3rem">Missing: ${result.regressions.map(esc).join(', ')} — fix before launch.</p>`));
+    wrap.appendChild(el(`<p class="hint" style="margin:0">Checked ${fmtTimestamp(deal.parity_checked_at)}</p>`));
+  } else {
+    wrap.appendChild(el(`<p class="hint" style="margin:0">Not checked yet — build (or deploy) the new site, then run the check.</p>`));
+  }
+  return wrap;
+}
+
+// ---------- invoicing ----------
+
+function renderInvoiceSection(deal, refresh) {
+  const wrap = el(`<div></div>`);
+  wrap.appendChild(el(`<div class="section-title">Invoice</div>`));
+  if (deal.invoice_status) {
+    const label = { draft: 'Draft', sent: 'Awaiting payment', paid: 'Paid' }[deal.invoice_status] || deal.invoice_status;
+    wrap.appendChild(el(`<div class="chip ${deal.invoice_status === 'paid' ? 'plain' : 'flag'}" style="display:inline-block;margin-bottom:.4rem">${esc(deal.invoice_number || '')} — ${label}</div>`));
+  }
+  const row = el(`<div class="action-row"></div>`);
+  wrap.appendChild(row);
+  const genBtn = el(`<button class="btn sm">${deal.invoice_path ? 'Regenerate invoice…' : 'Create invoice…'}</button>`);
+  genBtn.addEventListener('click', () => openInvoiceModal(deal, refresh));
+  row.appendChild(genBtn);
+  if (deal.invoice_path && deal.invoice_status !== 'sent' && deal.invoice_status !== 'paid') {
+    const b = el(`<button class="btn sm">Mark sent</button>`);
+    b.addEventListener('click', () => runSimpleAction(b, () => api.markInvoiceSent(deal.id), refresh));
+    row.appendChild(b);
+  }
+  if (deal.invoice_path && deal.invoice_status !== 'paid') {
+    const b = el(`<button class="btn sm primary">Mark paid</button>`);
+    b.addEventListener('click', () => runSimpleAction(b, () => api.markInvoicePaid(deal.id), refresh));
+    row.appendChild(b);
+  }
+  return wrap;
+}
+
+function openInvoiceModal(deal, refresh) {
+  let items = [];
+  try { items = deal.invoice_items ? JSON.parse(deal.invoice_items) : []; } catch { /* start fresh */ }
+  if (!items.length) items = [{ desc: deal.business_line === 'lodging' ? 'Listing setup' : 'Website build', amount: deal.deal_value || '' }];
+  const { wrap, body } = modalShell(`Invoice — ${deal.name}`);
+  const form = el(`<form></form>`);
+  const rowsEl = el(`<div></div>`);
+  form.appendChild(rowsEl);
+
+  function draw() {
+    rowsEl.innerHTML = '';
+    items.forEach((item, i) => {
+      const row = el(`
+        <div class="grid2" style="align-items:end">
+          <div class="field"><label>${i === 0 ? 'Description' : ''}</label><input data-k="desc" data-i="${i}" value="${esc(item.desc || '')}"></div>
+          <div class="field" style="display:flex;gap:.4rem;align-items:end">
+            <div style="flex:1"><label>${i === 0 ? 'Amount ($)' : ''}</label><input data-k="amount" data-i="${i}" type="number" value="${item.amount ?? ''}"></div>
+            <button type="button" class="btn sm danger" data-remove="${i}">×</button>
+          </div>
+        </div>
+      `);
+      rowsEl.appendChild(row);
+    });
+  }
+  draw();
+  rowsEl.addEventListener('input', e => {
+    const i = e.target.dataset.i;
+    if (i === undefined) return;
+    items[i][e.target.dataset.k] = e.target.value;
+  });
+  rowsEl.addEventListener('click', e => {
+    const idx = e.target.dataset.remove;
+    if (idx === undefined) return;
+    items.splice(Number(idx), 1);
+    draw();
+  });
+
+  const addBtn = el(`<button type="button" class="btn sm">+ Add line item</button>`);
+  addBtn.addEventListener('click', () => { items.push({ desc: '', amount: '' }); draw(); });
+  form.appendChild(addBtn);
+  form.appendChild(el(`<div class="field"><label>Due date</label><input name="dueDate" type="date" value="${deal.invoice_due_date || ''}"></div>`));
+  form.appendChild(el(`<div class="field"><label>Notes (optional)</label><input name="notes" placeholder="e.g. thanks for being an early client"></div>`));
+  form.appendChild(el(`
+    <div class="action-row" style="justify-content:flex-end;margin-top:.5rem">
+      <button type="button" class="btn" id="modal-cancel">Cancel</button>
+      <button type="submit" class="btn primary">Generate invoice</button>
+    </div>
+  `));
+  form.querySelector('#modal-cancel').addEventListener('click', () => wrap.remove());
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const cleanItems = items.filter(it => it.desc && Number(it.amount) > 0).map(it => ({ desc: it.desc, amount: Number(it.amount) }));
+    if (!cleanItems.length) { toast('Add at least one line item with a description and amount.', { error: true }); return; }
+    const submitBtn = form.querySelector('button[type=submit]');
+    submitBtn.disabled = true; submitBtn.textContent = 'Generating…';
+    try {
+      const result = await api.generateInvoice(deal.id, { items: cleanItems, dueDate: form.dueDate.value, notes: form.notes.value.trim() });
+      if (result?.jobId) {
+        watchJob(result.jobId, {
+          onDone: msg => { wrap.remove(); toast(msg.status === 'done' ? 'Invoice ready' : 'Invoice generation failed', { error: msg.status !== 'done' }); refresh(); },
+        });
+      } else { wrap.remove(); refresh(); }
+    } catch (err) { toast(err.message, { error: true }); submitBtn.disabled = false; submitBtn.textContent = 'Generate invoice'; }
+  });
+  body.appendChild(form);
+}
+
+// ---------- marketing kit (chat-driven /marketing-kit skill — flag it, then detect the output) ----------
+
+function renderMarketingKitSection(deal, refresh) {
+  const wrap = el(`<div></div>`);
+  wrap.appendChild(el(`<div class="section-title">Marketing kit</div>`));
+  if (deal.marketing_kit_path) {
+    const list = el(`<div class="hint">Loading files…</div>`);
+    wrap.appendChild(list);
+    api.marketingKitFiles(deal.id).then(({ files }) => {
+      list.innerHTML = '';
+      if (!files.length) { list.appendChild(el(`<p class="hint" style="margin:0">No files found in ${esc(deal.marketing_kit_path)}.</p>`)); return; }
+      for (const f of files) {
+        list.appendChild(el(`<div class="filelink"><span>${esc(f)}</span><a href="/api/deals/${deal.id}/marketing-kit/file?path=${encodeURIComponent(f)}" target="_blank" rel="noopener">Open ↗</a></div>`));
+      }
+    }).catch(err => { list.innerHTML = ''; list.appendChild(el(`<p class="hint">${esc(err.message)}</p>`)); });
+    return wrap;
+  }
+  if (deal.needs_marketing_kit) {
+    const slug = deal.client_slug || deal.name;
+    wrap.appendChild(el(`<p class="hint" style="margin:0 0 .5rem">Flagged — run <code>/marketing-kit ${esc(slug)}</code> in Claude Code chat, then check back here.</p>`));
+    const btn = el(`<button class="btn sm">Check for marketing kit</button>`);
+    btn.addEventListener('click', () => runSimpleAction(btn, () => api.checkMarketingKit(deal.id), refresh));
+    wrap.appendChild(btn);
+    return wrap;
+  }
+  const btn = el(`<button class="btn sm">Flag for /marketing-kit</button>`);
+  btn.addEventListener('click', () => runSimpleAction(btn, () => api.flagMarketingKit(deal.id), refresh));
+  wrap.appendChild(btn);
+  return wrap;
+}
+
 // ---------- generated files ----------
 
 function renderFiles(deal) {
   const links = [
     ['opportunityReport', 'Opportunity report', deal.opportunity_report_path],
+    ['parityBrief', 'Parity brief', deal.parity_baseline_path],
     ['demo', 'Demo site', deal.demo_path],
     ['proposal', deal.business_line === 'lodging' ? 'Proposal' : 'Pitch packet', deal.proposal_path],
     ['dist', 'Built site', deal.dist_path],
     [null, 'Live site', deal.live_url],
+    ['invoice', 'Invoice', deal.invoice_path],
   ].filter(([, , path]) => path);
   const wrap = el(`<div></div>`);
   if (!links.length) return wrap;

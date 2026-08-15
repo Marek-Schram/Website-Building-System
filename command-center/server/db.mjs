@@ -62,13 +62,31 @@ const MIGRATIONS = [
   "ALTER TABLE deals ADD COLUMN detected_booking_system TEXT",
   "ALTER TABLE deals ADD COLUMN platform_presence TEXT", // JSON: [{platform,label,found}], from find-booking-leads
   "ALTER TABLE deals ADD COLUMN platforms_wanted TEXT",  // e.g. "airbnb,vrbo" — last platforms picked for this deal
+  // Phase 3: parity checks (packages/parity)
+  "ALTER TABLE deals ADD COLUMN parity_baseline_path TEXT", // parity/<slug>/baseline.json, from capture.mjs
+  "ALTER TABLE deals ADD COLUMN parity_status TEXT",        // 'pass' | 'fail'
+  "ALTER TABLE deals ADD COLUMN parity_result TEXT",        // JSON: {preserved,regressions,improvements,style,contact,pages}
+  "ALTER TABLE deals ADD COLUMN parity_checked_at TEXT",
+  // Phase 3: real invoicing (packages/invoicing)
+  "ALTER TABLE deals ADD COLUMN invoice_number TEXT",
+  "ALTER TABLE deals ADD COLUMN invoice_status TEXT",   // 'draft' | 'sent' | 'paid'
+  "ALTER TABLE deals ADD COLUMN invoice_path TEXT",
+  "ALTER TABLE deals ADD COLUMN invoice_items TEXT",    // JSON: [{desc,amount}] — last line items used
+  "ALTER TABLE deals ADD COLUMN invoice_due_date TEXT",
+  "ALTER TABLE deals ADD COLUMN invoice_paid_at TEXT",
+  // Phase 3: marketing-kit (chat-driven skill, no CLI script — flag + filesystem detection)
+  "ALTER TABLE deals ADD COLUMN needs_marketing_kit INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE deals ADD COLUMN marketing_kit_path TEXT",
 ];
 for (const sql of MIGRATIONS) { try { db.exec(sql); } catch (e) { if (!/duplicate column/i.test(e.message)) throw e; } }
 
 const DEAL_FIELDS = ['business_line', 'name', 'contact_name', 'phone', 'email', 'address', 'city', 'website',
   'industry', 'source', 'stage', 'priority', 'opportunity_score', 'deal_value', 'next_action', 'follow_up_date',
   'client_slug', 'demo_path', 'opportunity_report_path', 'proposal_path', 'dist_path', 'live_url',
-  'needs_security_gate', 'invoiced_amount', 'detected_booking_system', 'platform_presence', 'platforms_wanted'];
+  'needs_security_gate', 'invoiced_amount', 'detected_booking_system', 'platform_presence', 'platforms_wanted',
+  'parity_baseline_path', 'parity_status', 'parity_result', 'parity_checked_at',
+  'invoice_number', 'invoice_status', 'invoice_path', 'invoice_items', 'invoice_due_date', 'invoice_paid_at',
+  'needs_marketing_kit', 'marketing_kit_path'];
 
 export function listDeals({ businessLine, stage } = {}) {
   let sql = 'SELECT * FROM deals';
@@ -78,6 +96,10 @@ export function listDeals({ businessLine, stage } = {}) {
   if (where.length) sql += ' WHERE ' + where.join(' AND ');
   sql += ' ORDER BY updated_at DESC';
   return db.prepare(sql).all(params);
+}
+
+export function listFollowUps() {
+  return db.prepare(`SELECT * FROM deals WHERE follow_up_date IS NOT NULL AND follow_up_date != '' ORDER BY follow_up_date ASC`).all();
 }
 
 export function getDeal(id) {

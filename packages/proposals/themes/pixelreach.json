@@ -25,6 +25,8 @@
     { "id": "pro",      "name": "Pro",      "price": 150, "platforms": 3, "featured": false,
       "features": ["Listing created on 3 booking platforms", "SEO-friendly title + photos+description", "Calendar set up + synced", "Rate / min-stay rules applied", "Photo & amenity refresh guidance", "Launch + verification + support"] }
   ],
+  "paymentInstructions": "Pay by check, Venmo, or bank transfer — reply to this invoice for details.",
+  "terms": "Due within 14 days of the date above. Thanks for the business!",
   "upsell": {
     "enabled": true,
     "blurb": "Need a simple website too? We build fast, mobile-friendly sites that match your brand and feature your Book button — ask for a quote."

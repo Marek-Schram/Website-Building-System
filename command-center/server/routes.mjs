@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync, cpSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { readFileSync, writeFileSync, existsSync, cpSync, readdirSync, statSync } from 'node:fs';
+import { resolve, relative, join } from 'node:path';
 import {
-  listDeals, getDeal, createDeal, updateDeal, deleteDeal, listActivity, logActivity,
+  listDeals, getDeal, createDeal, updateDeal, deleteDeal, listActivity, logActivity, listFollowUps,
 } from './db.mjs';
 import {
   ROOT, SCRIPTS, runNodeJob, getJob, waitForJob, runJsonTool, pipeJobToSSE,
@@ -23,6 +23,33 @@ const q = s => `"${esc(s)}"`;
 function readJsonIfExists(path) {
   if (!existsSync(path)) return null;
   try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; }
+}
+
+// Pulls the last JSON blob out of a job's captured stdout/stderr lines — used for tools run with --json
+// whose exit code alone isn't the whole story (e.g. parity-check.mjs exits 1 on a real, readable "fail").
+function lastJsonFromLines(lines) {
+  const text = lines.join('\n');
+  const start = text.indexOf('{'), altStart = text.indexOf('[');
+  const from = start === -1 ? altStart : (altStart === -1 ? start : Math.min(start, altStart));
+  if (from === -1) return null;
+  try { return JSON.parse(text.slice(from)); } catch { return null; }
+}
+
+// Recursively lists files under `dir` (bounded depth + count) as paths relative to `dir` — used to browse
+// chat-generated output (marketing-toolkit/<slug>/) that no script wrote a manifest for.
+function listFilesRecursive(dir, { maxDepth = 3, maxFiles = 200 } = {}) {
+  const out = [];
+  (function walk(d, depth) {
+    if (depth > maxDepth || out.length >= maxFiles) return;
+    for (const name of readdirSync(d)) {
+      if (out.length >= maxFiles) return;
+      const abs = join(d, name);
+      const st = statSync(abs);
+      if (st.isDirectory()) walk(abs, depth + 1);
+      else out.push(relative(dir, abs));
+    }
+  })(dir, 0);
+  return out.sort();
 }
 
 // ---------- auth ----------
@@ -95,6 +122,18 @@ router.post('/deals/:id/activity', (req, res) => {
   if (!text) return res.status(400).json({ error: 'Note text is required.' });
   logActivity(deal.id, req.body.type && ['note', 'call', 'email'].includes(req.body.type) ? req.body.type : 'note', text);
   res.status(201).json({ activity: listActivity(deal.id) });
+});
+
+// Cross-board follow-up reminders: every deal with a follow_up_date set, split into overdue / upcoming
+// (next 14 days) / later — so a due date doesn't just sit quietly on a card in whatever column it's in.
+router.get('/follow-ups', (req, res) => {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const soonStr = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  const all = listFollowUps();
+  const overdue = all.filter(d => d.follow_up_date < todayStr);
+  const upcoming = all.filter(d => d.follow_up_date >= todayStr && d.follow_up_date <= soonStr);
+  const later = all.filter(d => d.follow_up_date > soonStr);
+  res.json({ overdue, upcoming, later });
 });
 
 // ---------- jobs (SSE progress for long-running tools) ----------
@@ -297,6 +336,154 @@ router.post('/deals/:id/propose-lodging', (req, res) => {
   res.status(202).json({ jobId: job.id });
 });
 
+// Captures the OLD site (deal.website, when replacing an existing site — /match-site's capture step) as a
+// parity baseline: style + every feature it has, so a rebuild can be checked against losing nothing.
+router.post('/deals/:id/capture-old-site', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  if (deal.business_line !== 'website') return res.status(400).json({ error: 'Parity checks are for website deals (replacing an existing site).' });
+  if (!deal.website) return res.status(400).json({ error: 'This deal has no website URL to capture yet — add the old site\'s URL first.' });
+  const slug = dealSlug(deal);
+  const job = runNodeJob(SCRIPTS.captureOldSite, [deal.website, '--slug', slug]);
+  logActivity(deal.id, 'tool_run', `Capturing old site (${deal.website}) as a parity baseline`);
+  waitForJob(job).then(j => {
+    const path = resolve(ROOT, 'parity', slug, 'baseline.json');
+    if (existsSync(path)) {
+      updateDeal(deal.id, { parity_baseline_path: `parity/${slug}/baseline.json`, parity_status: null, parity_result: null, parity_checked_at: null });
+      logActivity(deal.id, 'tool_run', 'Old site captured — style + functionality baseline ready for parity checks');
+    } else logActivity(deal.id, 'tool_run', 'Capture finished but no baseline was written (site may be unreachable).');
+  });
+  res.status(202).json({ jobId: job.id });
+});
+
+router.post('/deals/:id/run-parity-check', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  if (!deal.parity_baseline_path) return res.status(400).json({ error: 'Capture the old site first — there is no baseline to compare against.' });
+  const distIndex = deal.dist_path && resolve(ROOT, deal.dist_path, 'index.html');
+  const target = deal.live_url || distIndex;
+  if (!target || (!deal.live_url && !existsSync(target))) return res.status(400).json({ error: 'Build (or deploy) the new site first — there is nothing to compare yet.' });
+  const slug = dealSlug(deal);
+  const job = runNodeJob(SCRIPTS.parityCheck, [slug, target, '--json']);
+  logActivity(deal.id, 'tool_run', `Parity check started against ${target}`);
+  waitForJob(job).then(j => {
+    const data = lastJsonFromLines(j.lines);
+    if (!data) { logActivity(deal.id, 'tool_run', 'Parity check finished but produced no readable result.'); return; }
+    const r = data.results || {};
+    updateDeal(deal.id, {
+      parity_status: data.pass ? 'pass' : 'fail',
+      parity_result: JSON.stringify(r),
+      parity_checked_at: new Date().toISOString(),
+    });
+    logActivity(deal.id, 'tool_run', data.pass
+      ? `Parity check PASSED — ${r.preserved?.length || 0} preserved, ${r.improvements?.length || 0} added, 0 regressions`
+      : `Parity check found ${r.regressions?.length || 0} regression(s): ${(r.regressions || []).join(', ')} — fix before launch`);
+  });
+  res.status(202).json({ jobId: job.id });
+});
+
+// ---------- marketing kit (chat-driven /marketing-kit skill — the board can only flag + detect it, the
+// same "not a script" pattern as the security gate) ----------
+
+router.post('/deals/:id/marketing-kit/flag', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  const slug = dealSlug(deal);
+  updateDeal(deal.id, { needs_marketing_kit: 1 });
+  logActivity(deal.id, 'note', `Flagged for /marketing-kit ${slug} — run it in Claude Code chat.`);
+  res.json({ ok: true, slug });
+});
+
+router.post('/deals/:id/marketing-kit/check', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  const slug = dealSlug(deal);
+  const dir = resolve(ROOT, 'marketing-toolkit', slug);
+  if (!existsSync(dir)) return res.json({ found: false });
+  const files = listFilesRecursive(dir);
+  if (!files.length) return res.json({ found: false });
+  updateDeal(deal.id, { marketing_kit_path: `marketing-toolkit/${slug}`, needs_marketing_kit: 0 });
+  logActivity(deal.id, 'tool_run', `Marketing kit found — ${files.length} file(s) in marketing-toolkit/${slug}`);
+  res.json({ found: true, files });
+});
+
+router.get('/deals/:id/marketing-kit/files', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  if (!deal.marketing_kit_path) return res.json({ files: [] });
+  const dir = resolve(ROOT, deal.marketing_kit_path);
+  if (!existsSync(dir)) return res.json({ files: [] });
+  res.json({ files: listFilesRecursive(dir) });
+});
+
+router.get('/deals/:id/marketing-kit/file', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  if (!deal.marketing_kit_path) return res.status(404).json({ error: 'No marketing kit for this deal yet.' });
+  const dir = resolve(ROOT, deal.marketing_kit_path);
+  const rel = String(req.query.path || '');
+  const abs = resolve(dir, rel);
+  if (!abs.startsWith(dir + '/') && abs !== dir) return res.status(400).json({ error: 'Invalid path.' });
+  if (!existsSync(abs) || !statSync(abs).isFile()) return res.status(404).json({ error: 'File not found.' });
+  res.sendFile(abs);
+});
+
+// ---------- invoicing (packages/invoicing) ----------
+
+router.post('/deals/:id/invoice/generate', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  const items = (req.body?.items || []).filter(i => i && String(i.desc || '').trim() && Number(i.amount) > 0)
+    .map(i => ({ desc: String(i.desc).trim(), amount: Number(i.amount) }));
+  if (!items.length) return res.status(400).json({ error: 'At least one line item (description + amount) is required.' });
+  const slug = dealSlug(deal);
+  const number = deal.invoice_number || `INV-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${String(deal.id).padStart(4, '0')}`;
+  const dueDate = req.body?.dueDate || '';
+  const notes = req.body?.notes || '';
+  const args = [deal.name, '--slug', slug, '--number', number, '--items', JSON.stringify(items), '--business-line', deal.business_line];
+  if (dueDate) args.push('--due', dueDate);
+  if (notes) args.push('--notes', notes);
+  if (deal.contact_name) args.push('--bill-contact', deal.contact_name);
+  if (deal.email) args.push('--bill-email', deal.email);
+  if (deal.address) args.push('--bill-address', deal.address + (deal.city ? `, ${deal.city}` : ''));
+  updateDeal(deal.id, { invoice_number: number, invoice_status: 'draft', invoice_items: JSON.stringify(items), invoice_due_date: dueDate || null, invoice_paid_at: null });
+  const job = runNodeJob(SCRIPTS.invoice, args);
+  logActivity(deal.id, 'tool_run', `Invoice ${number} generation started (${items.length} item(s))`);
+  waitForJob(job).then(j => {
+    const path = resolve(ROOT, 'invoices/out', slug, `invoice-${number}.html`);
+    if (existsSync(path)) {
+      updateDeal(deal.id, { invoice_path: `invoices/out/${slug}/invoice-${number}.html` });
+      const total = items.reduce((s, i) => s + i.amount, 0);
+      logActivity(deal.id, 'tool_run', `Invoice ${number} ready — $${total.toLocaleString()}`);
+    } else logActivity(deal.id, 'tool_run', 'Invoice generation finished but no file was found.');
+  });
+  res.status(202).json({ jobId: job.id });
+});
+
+router.post('/deals/:id/invoice/mark-sent', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  if (!deal.invoice_path) return res.status(400).json({ error: 'Generate an invoice first.' });
+  updateDeal(deal.id, { invoice_status: 'sent' });
+  logActivity(deal.id, 'note', `Invoice ${deal.invoice_number} marked sent`);
+  res.json({ ok: true });
+});
+
+router.post('/deals/:id/invoice/mark-paid', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  if (!deal.invoice_path) return res.status(400).json({ error: 'Generate an invoice first.' });
+  let items = [];
+  try { items = JSON.parse(deal.invoice_items || '[]'); } catch { /* fall through with empty items */ }
+  const total = items.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+  updateDeal(deal.id, {
+    invoice_status: 'paid', invoice_paid_at: new Date().toISOString(), stage: 'invoiced',
+    ...(deal.invoiced_amount == null && total ? { invoiced_amount: total } : {}),
+  });
+  logActivity(deal.id, 'note', `Invoice ${deal.invoice_number} marked paid — moved to Invoiced`);
+  res.json({ ok: true });
+});
+
 // ---------- winning the deal / delivery ----------
 
 router.post('/deals/:id/start-client', (req, res) => {
@@ -487,7 +674,11 @@ router.post('/deals/:id/deploy', (req, res) => {
 router.get('/deals/:id/files/:kind', (req, res) => {
   const deal = getDeal(req.params.id);
   if (!deal) return res.status(404).json({ error: 'Deal not found.' });
-  const map = { demo: deal.demo_path, proposal: deal.proposal_path, opportunityReport: deal.opportunity_report_path, dist: deal.dist_path && `${deal.dist_path}/index.html` };
+  const map = {
+    demo: deal.demo_path, proposal: deal.proposal_path, opportunityReport: deal.opportunity_report_path,
+    dist: deal.dist_path && `${deal.dist_path}/index.html`, invoice: deal.invoice_path,
+    parityBrief: deal.parity_baseline_path && deal.parity_baseline_path.replace(/baseline\.json$/, 'baseline.md'),
+  };
   const rel = map[req.params.kind];
   if (!rel) return res.status(404).json({ error: 'Not generated yet.' });
   const abs = resolve(ROOT, rel);

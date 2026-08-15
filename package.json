@@ -24,6 +24,7 @@
     "booking-leads": "node packages/lodging-prospects/src/find-booking-leads.mjs",
     "propose": "node packages/proposals/src/proposal.mjs",
     "listing-kit": "node packages/listing-kit/src/kit.mjs",
+    "invoice": "node packages/invoicing/src/invoice.mjs",
     "command-center": "node command-center/server/index.mjs"
   },
   "engines": {

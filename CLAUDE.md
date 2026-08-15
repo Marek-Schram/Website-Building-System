@@ -40,6 +40,7 @@ packages/parity/      ← capture an old site + prove parity → /match-site
 packages/opportunities/ ← detect weak points on a prospect's site → /find-opportunities
 packages/prospect-brief/ ← one emailable doc: opportunities+audit+demo → /prospect-brief
 packages/security/    packages/audit/ → /audit-site   packages/prospecting/ → /find-leads
+packages/invoicing/   ← branded invoice.html for a won deal (from Command Center) → `npm run invoice`
 packages/demo-gen/ → /demo-site   packages/testing/ → /test-site, /blind-review
 packages/lodging-prospects/ → /find-booking-leads   packages/proposals/ → /propose-lodging   packages/listing-kit/ → /listing-kit
 command-center/ ← local GUI: one pipeline board driving every skill above → `npm run command-center`
