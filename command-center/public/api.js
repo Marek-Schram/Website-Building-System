@@ -39,6 +39,7 @@ export const api = {
   scanOpportunities: id => req('POST', `/deals/${id}/scan-opportunities`),
   generateDemo: id => req('POST', `/deals/${id}/generate-demo`),
   generateBrief: id => req('POST', `/deals/${id}/generate-brief`),
+  checkBookingPresence: id => req('POST', `/deals/${id}/check-booking-presence`),
   proposeLodging: (id, body) => req('POST', `/deals/${id}/propose-lodging`, body),
   listingKit: (id, body) => req('POST', `/deals/${id}/listing-kit`, body),
 

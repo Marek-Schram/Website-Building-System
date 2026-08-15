@@ -145,11 +145,21 @@ router.post('/import/booking-leads', (req, res) => {
     let created = 0;
     for (const l of data?.leads || []) {
       if (!l.name) continue;
-      createDeal({
+      // find-booking-leads already did the hard part — which platforms they're missing from, and which
+      // booking system they run (own-site scan). Keep both instead of throwing this away on import.
+      const deal = createDeal({
         business_line: 'lodging', name: l.name, phone: l.phone || null, address: l.address || null,
         city, website: l.website || null, industry: l.type || null, source: `find-booking-leads: ${city}`,
         stage: 'lead', priority: l.priority || priorityFromScore(l.opportunityScore), opportunity_score: l.opportunityScore ?? null,
+        detected_booking_system: (l.own?.systems || [])[0] || null,
+        platform_presence: l.presence ? JSON.stringify(l.presence) : null,
       });
+      if (l.presence?.length) {
+        const missing = l.presence.filter(p => !p.found).map(p => p.label);
+        logActivity(deal.id, 'note', missing.length
+          ? `Missing from: ${missing.join(', ')}${l.own?.systems?.length ? ` · runs ${l.own.systems.join(', ')}` : ''}`
+          : 'Already listed on all checked platforms');
+      }
       created++;
     }
     job.meta.created = created;
@@ -232,18 +242,51 @@ router.post('/deals/:id/generate-brief', (req, res) => {
   res.status(202).json({ jobId: job.id });
 });
 
+// Keyless single-property check (re-runs find-booking-leads against just this deal's own site) — the
+// "which platforms are they missing, what do they already run" evidence that makes the pitch honest.
+router.post('/deals/:id/check-booking-presence', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  if (deal.business_line !== 'lodging') return res.status(400).json({ error: 'Booking-presence checks are for lodging deals.' });
+  if (!deal.website) return res.status(400).json({ error: 'This deal has no website URL to check.' });
+  const args = ['--url', deal.website, '--name', deal.name];
+  if (deal.city) args.push('--city', deal.city);
+  const job = runNodeJob(SCRIPTS.findBookingLeads, args);
+  logActivity(deal.id, 'tool_run', 'Booking-platform presence check started');
+  waitForJob(job).then(j => {
+    const data = readJsonIfExists(resolve(ROOT, 'lodging-prospects/out', slugify(deal.name) + '.json'));
+    const lead = data?.leads?.[0];
+    if (!lead) { logActivity(deal.id, 'tool_run', 'Presence check finished but produced no readable result.'); return; }
+    updateDeal(deal.id, {
+      opportunity_score: lead.opportunityScore, priority: lead.priority || priorityFromScore(lead.opportunityScore),
+      detected_booking_system: (lead.own?.systems || [])[0] || null,
+      platform_presence: lead.presence ? JSON.stringify(lead.presence) : null,
+    });
+    const missing = (lead.presence || []).filter(p => !p.found).map(p => p.label);
+    logActivity(deal.id, 'tool_run', missing.length
+      ? `Missing from: ${missing.join(', ')}${lead.own?.systems?.length ? ` · runs ${lead.own.systems.join(', ')}` : ''}`
+      : 'Already listed on all checked platforms');
+  });
+  res.status(202).json({ jobId: job.id });
+});
+
 router.post('/deals/:id/propose-lodging', (req, res) => {
   const deal = getDeal(req.params.id);
   if (!deal) return res.status(404).json({ error: 'Deal not found.' });
   const slug = dealSlug(deal);
-  const args = [deal.name, '--slug', slug];
+  const platforms = req.body?.platforms || deal.platforms_wanted || 'airbnb,vrbo';
+  const bookingSystem = req.body?.bookingSystem || deal.detected_booking_system || '';
+  const args = [deal.name, '--slug', slug, '--platforms', platforms];
   if (deal.city) args.push('--city', deal.city);
   if (deal.contact_name) args.push('--contact', deal.contact_name);
-  if (req.body?.platforms) args.push('--platforms', req.body.platforms);
-  if (req.body?.bookingSystem) args.push('--booking-system', req.body.bookingSystem);
+  if (deal.industry) args.push('--property-type', deal.industry);
+  if (bookingSystem) args.push('--booking-system', bookingSystem);
   if (req.body?.tier) args.push('--tier', req.body.tier);
+  // Remember whatever was actually used (including a manually-typed booking system) so it carries forward
+  // to the listing kit later instead of asking Marek to type it twice.
+  updateDeal(deal.id, { platforms_wanted: platforms, ...(bookingSystem ? { detected_booking_system: bookingSystem } : {}) });
   const job = runNodeJob(SCRIPTS.proposeLodging, args);
-  logActivity(deal.id, 'tool_run', 'Lodging proposal generation started');
+  logActivity(deal.id, 'tool_run', `Lodging proposal generation started (${platforms})`);
   waitForJob(job).then(j => {
     const path = resolve(ROOT, 'proposals/out', slug, 'proposal.html');
     if (existsSync(path)) {
@@ -283,13 +326,14 @@ router.post('/deals/:id/listing-kit', (req, res) => {
   const deal = getDeal(req.params.id);
   if (!deal) return res.status(404).json({ error: 'Deal not found.' });
   const slug = dealSlug(deal);
-  const args = [deal.name, '--slug', slug];
+  const platforms = req.body?.platforms || deal.platforms_wanted || 'airbnb,vrbo';
+  const bookingSystem = req.body?.bookingSystem || deal.detected_booking_system || '';
+  const args = [deal.name, '--slug', slug, '--platforms', platforms];
   if (deal.city) args.push('--city', deal.city);
-  if (req.body?.platforms) args.push('--platforms', req.body.platforms);
-  if (req.body?.bookingSystem) args.push('--booking-system', req.body.bookingSystem);
+  if (bookingSystem) args.push('--booking-system', bookingSystem);
   const job = runNodeJob(SCRIPTS.listingKit, args);
-  updateDeal(deal.id, { client_slug: slug, stage: 'won' });
-  logActivity(deal.id, 'tool_run', 'Listing kit generation started');
+  updateDeal(deal.id, { client_slug: slug, stage: 'won', platforms_wanted: platforms, ...(bookingSystem ? { detected_booking_system: bookingSystem } : {}) });
+  logActivity(deal.id, 'tool_run', `Listing kit generation started (${platforms})`);
   waitForJob(job).then(j => logActivity(deal.id, 'tool_run', j.status === 'done' ? 'Listing kit ready in listing-kit/out/' + slug : 'Listing kit generation failed'));
   res.status(202).json({ jobId: job.id });
 });

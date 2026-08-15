@@ -45,9 +45,12 @@ export async function openDrawer(dealId, { onClose, onChanged }) {
 
     const body = drawer.querySelector('#drawer-body');
     body.appendChild(renderFieldsForm(deal, refresh));
+    if (deal.business_line === 'lodging') body.appendChild(renderPresenceSection(deal));
     body.appendChild(renderFiles(deal));
     body.appendChild(renderActions(deal, refresh));
-    if (deal.client_slug) body.appendChild(renderAddonsSection(deal, refresh));
+    // Add-ons apply to a real clients/<slug> folder, which only website deals have — a lodging deal can
+    // carry a client_slug too (set when its listing kit is generated), so gate on business_line as well.
+    if (deal.business_line === 'website' && deal.client_slug) body.appendChild(renderAddonsSection(deal, refresh));
     body.appendChild(renderActivity(deal, refresh));
     const delRow = el(`<div class="divider"></div>`);
     body.appendChild(delRow);
@@ -100,6 +103,22 @@ function renderFieldsForm(deal, refresh) {
   return wrap;
 }
 
+// ---------- booking-platform presence (lodging deals) ----------
+
+function renderPresenceSection(deal) {
+  const wrap = el(`<div></div>`);
+  wrap.appendChild(el(`<div class="section-title">Booking platforms</div>`));
+  let presence = [];
+  try { presence = deal.platform_presence ? JSON.parse(deal.platform_presence) : []; } catch { /* stale/bad data — show nothing rather than break the drawer */ }
+  if (presence.length) {
+    const chips = el(`<div class="action-row" style="margin-bottom:.4rem"></div>`);
+    for (const p of presence) chips.appendChild(el(`<span class="chip ${p.found ? 'plain' : 'flag'}">${p.found ? '✓' : '✗'} ${esc(p.label)}</span>`));
+    wrap.appendChild(chips);
+  }
+  wrap.appendChild(el(`<p class="hint" style="margin:0 0 .5rem">${deal.detected_booking_system ? `Runs <b>${esc(deal.detected_booking_system)}</b> — proposals will offer to connect to it.` : presence.length ? 'No booking system detected on their own site.' : 'Not checked yet.'}</p>`));
+  return wrap;
+}
+
 // ---------- generated files ----------
 
 function renderFiles(deal) {
@@ -136,6 +155,12 @@ function renderActions(deal, refresh) {
     row.appendChild(b);
     return b;
   };
+  const addModalBtn = (label, openModal) => {
+    const b = el(`<button class="btn sm">${esc(label)}</button>`);
+    b.addEventListener('click', () => openModal({ consoleBox, refresh }));
+    row.appendChild(b);
+    return b;
+  };
 
   async function runAction(btn, fn) {
     btn.disabled = true;
@@ -143,24 +168,16 @@ function renderActions(deal, refresh) {
     try {
       const result = await fn();
       if (result?.jobId) {
-        consoleBox.style.display = 'block'; consoleBox.textContent = '';
         btn.textContent = 'Running…';
-        watchJob(result.jobId, {
-          onLine: line => { consoleBox.textContent += line + '\n'; consoleBox.scrollTop = consoleBox.scrollHeight; },
-          onDone: msg => {
-            btn.disabled = false; btn.textContent = orig;
-            toast(msg.status === 'done' ? `${orig} finished` : `${orig} failed — see log`, { error: msg.status !== 'done' });
-            refresh();
-          },
-        });
+        await watchJobAndRefresh(result.jobId, { label: orig, consoleBox, refresh });
       } else {
-        btn.disabled = false; btn.textContent = orig;
         toast(`${orig} done`);
         refresh();
       }
     } catch (err) {
-      btn.disabled = false; btn.textContent = orig;
       toast(err.message, { error: true });
+    } finally {
+      btn.disabled = false; btn.textContent = orig;
     }
   }
 
@@ -182,13 +199,69 @@ function renderActions(deal, refresh) {
       addBtn('Deploy', () => api.deploy(deal.id));
     }
   } else {
+    if (deal.website) addBtn('Check booking presence', () => api.checkBookingPresence(deal.id));
     if (deal.stage !== 'won' && deal.stage !== 'delivered' && deal.stage !== 'invoiced') {
-      addBtn('Generate proposal', () => api.proposeLodging(deal.id, {}));
+      addModalBtn('Generate proposal…', ctx => openLodgingActionModal('proposal', deal, ctx));
     }
-    addBtn('Generate listing kit', () => api.listingKit(deal.id, {}));
+    addModalBtn('Generate listing kit…', ctx => openLodgingActionModal('kit', deal, ctx));
   }
 
   return wrap;
+}
+
+// Shared by plain action buttons and the lodging config modals: shows a job's live output in the given
+// console box and toasts + refreshes the drawer once it finishes.
+function watchJobAndRefresh(jobId, { label, consoleBox, refresh }) {
+  consoleBox.style.display = 'block'; consoleBox.textContent = '';
+  return new Promise(resolveJob => {
+    watchJob(jobId, {
+      onLine: line => { consoleBox.textContent += line + '\n'; consoleBox.scrollTop = consoleBox.scrollHeight; },
+      onDone: msg => {
+        toast(msg.status === 'done' ? `${label} finished` : `${label} failed — see log`, { error: msg.status !== 'done' });
+        refresh();
+        resolveJob(msg);
+      },
+    });
+  });
+}
+
+// Config modal for the two lodging actions that need per-run choices (which platforms, which tier, which
+// booking system to connect to) instead of always falling back to defaults.
+function openLodgingActionModal(kind, deal, { consoleBox, refresh }) {
+  const isProposal = kind === 'proposal';
+  const platformDefs = [['airbnb', 'Airbnb'], ['vrbo', 'Vrbo'], ['booking.com', 'Booking.com'], ['expedia', 'Expedia'], ['hotels.com', 'Hotels.com']];
+  const wanted = new Set((deal.platforms_wanted || 'airbnb,vrbo').split(',').map(s => s.trim()).filter(Boolean));
+  const { wrap, body } = modalShell(isProposal ? `Generate proposal — ${deal.name}` : `Generate listing kit — ${deal.name}`);
+  const form = el(`
+    <form>
+      <div class="field">
+        <label>Platforms</label>
+        <div>${platformDefs.map(([id, label]) => `<label style="display:inline-flex;align-items:center;gap:.3rem;margin:.2rem .9rem .2rem 0;font-weight:400"><input type="checkbox" name="platform" value="${id}" ${wanted.has(id) ? 'checked' : ''}> ${label}</label>`).join('')}</div>
+      </div>
+      ${isProposal ? `<div class="field"><label>Tier</label><select name="tier"><option value="basic">Basic — $50 / 1 platform</option><option value="standard" selected>Standard — $90 / 2 platforms</option><option value="pro">Pro — $150 / 3 platforms</option></select></div>` : ''}
+      <div class="field"><label>Booking system (optional)</label><input name="bookingSystem" value="${esc(deal.detected_booking_system || '')}" placeholder="e.g. Cloudbeds — leave blank if none"></div>
+      <div class="action-row" style="justify-content:flex-end">
+        <button type="button" class="btn" id="modal-cancel">Cancel</button>
+        <button type="submit" class="btn primary">${isProposal ? 'Generate proposal' : 'Generate listing kit'}</button>
+      </div>
+    </form>
+  `);
+  form.querySelector('#modal-cancel').addEventListener('click', () => wrap.remove());
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const platforms = [...form.querySelectorAll('input[name=platform]:checked')].map(i => i.value).join(',');
+    if (!platforms) { toast('Pick at least one platform.', { error: true }); return; }
+    const payload = { platforms, bookingSystem: form.bookingSystem.value.trim() };
+    if (isProposal) payload.tier = form.tier.value;
+    wrap.remove();
+    const label = isProposal ? 'Generate proposal' : 'Generate listing kit';
+    try {
+      const result = isProposal ? await api.proposeLodging(deal.id, payload) : await api.listingKit(deal.id, payload);
+      if (result?.jobId) await watchJobAndRefresh(result.jobId, { label, consoleBox, refresh });
+      else refresh();
+    } catch (err) { toast(err.message, { error: true }); }
+  });
+  body.appendChild(form);
 }
 
 // ---------- add-ons ----------
