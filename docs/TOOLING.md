@@ -1,6 +1,9 @@
 # TOOLING — free tools, MCP, packages
 MCP (.mcp.json, free): Context7, Playwright (QA/E2E + parity/opportunity screenshots), Filesystem, Fetch (captures/scans
-sites), Sequential-Thinking. Client engine: Google Places + PageSpeed (free). Add-on providers (business supplies):
+sites), Sequential-Thinking. Cloudflare's official remote servers (OAuth via /mcp on first connect, run `/mcp` to
+log in): cloudflare-docs (public docs search, no auth), cloudflare (full API — Pages projects/deploys, DNS, zones),
+cloudflare-bindings (Workers/KV/R2/D1/Workers AI — used by the chatbot-worker add-on), cloudflare-builds,
+cloudflare-observability. Client engine: Google Places + PageSpeed (free). Add-on providers (business supplies):
 Toast/Square/ChowNow, OpenTable/Resy, Calendly/SimplyBook, Brevo, tawk.to, Stripe/Snipcart. Testing: Playwright+axe,
 Vitest, Knip. Analysis (no keys): parity capture + parity-check, opportunities detector. Security: Strix/Nuclei + Cloudflare WAF.
 
