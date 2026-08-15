@@ -41,6 +41,7 @@ packages/opportunities/ ← detect weak points on a prospect's site → /find-op
 packages/prospect-brief/ ← one emailable doc: opportunities+audit+demo → /prospect-brief
 packages/security/    packages/audit/ → /audit-site   packages/prospecting/ → /find-leads
 packages/demo-gen/ → /demo-site   packages/testing/ → /test-site, /blind-review
+packages/lodging-prospects/ → /find-booking-leads   packages/proposals/ → /propose-lodging   packages/listing-kit/ → /listing-kit
 clients/  demos/  parity/  opportunities/  memory/  marketing-toolkit/  scripts/  docs/
 ```
 
@@ -69,6 +70,12 @@ fix) → `/audit-site` → outreach the top weak points.
 ### C) Replace an existing site (docs/PARITY.md)
 `/find-opportunities` (weak points) + `/match-site` (capture style + functionality) → build to match →
 `parity-check` proves nothing lost + lists improvements. "Keep what's good, fix what's weak, for less."
+
+### D) Booking line of business (lodging, docs/BOOKING-INTEGRATION.md)
+`/find-booking-leads "<city>"` (who's missing from Airbnb/Vrbo/Booking.com/Expedia/Hotels.com + their current
+booking system) → `/propose-lodging` (branded proposal, one theme file) → `/listing-kit` (onboard + track →
+verified live → invoice). Add-on: `booking-link` ("Book on <platform>" button + optional iCal sync).
+Free checklist: Basic $50/1 platform, Standard $90/2, Pro $150/3 — no deposit, pay when live.
 
 ### Debugging & cleanup (hand off)
 `/test-site` → `qa-debugger`. `/blind-review` → `blind-reviewer` (context-free dead-code cleanup).

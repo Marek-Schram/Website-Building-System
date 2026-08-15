@@ -20,7 +20,10 @@
     "test:unit": "vitest run",
     "test:e2e": "playwright test packages/testing/e2e",
     "deadcode": "knip",
-    "brief": "node packages/prospect-brief/src/brief.mjs"
+    "brief": "node packages/prospect-brief/src/brief.mjs",
+    "booking-leads": "node packages/lodging-prospects/src/find-booking-leads.mjs",
+    "propose": "node packages/proposals/src/proposal.mjs",
+    "listing-kit": "node packages/listing-kit/src/kit.mjs"
   },
   "engines": {
     "node": ">=18"

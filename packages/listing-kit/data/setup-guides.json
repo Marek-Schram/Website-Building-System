@@ -1,0 +1,83 @@
+{
+  "$comment": "Per-platform listing setup guides (steps we execute as part of the Pro package).",
+  "guides": {
+    "airbnb": {
+      "label": "Airbnb",
+      "signup": "Create/use an Airbnb hosting account at airbnb.com/hosting (free to list).",
+      "steps": [
+        "Start a new listing → 'Place to stay'.",
+        "Enter property type, rooms/beds/bathrooms, and capacity.",
+        "Add title + description from the drafted listing-copy.md.",
+        "Upload photos (cover photo first — we advise the recommended set).",
+        "Set house rules, check-in/out times, and cancellation policy.",
+        "Set base nightly price + weekend/special pricing in the calendar.",
+        "Set availability window and minimum-stay rules.",
+        "Connect calendar: Settings → Availability → Calendar sync → iCal URL (or channel manager if using one).",
+        "Submit for review — Airbnb typically approves within 24–72h.",
+        "Verify the listing is live by opening the public URL."
+      ]
+    },
+    "vrbo": {
+      "label": "Vrbo",
+      "signup": "Sign up at vrbo.com (part of the Expedia group) — hosts.list your property.",
+      "steps": [
+        "Create a property listing → 'List Your Property'.",
+        "Enter property type, bedrooms, bathrooms, max guests.",
+        "Add title + description from listing-copy.md.",
+        "Upload photos (Vrbo recommends 10+ incl. exterior).",
+        "Set house rules + rental agreement language.",
+        "Set nightly/weekly rates + minimum stay in the calendar.",
+        "Connect calendar: Calendar tab → iCal import/export (or channel manager).",
+        "Enable 'Instant Book' or 'Inquiry' as preferred.",
+        "Submit for review and confirm the public listing URL."
+      ]
+    },
+    "booking.com": {
+      "label": "Booking.com",
+      "signup": "Register a property at join.booking.com (extranet).",
+      "steps": [
+        "Create property profile → choose 'Hotel / Other property'.",
+        "Enter address, property type, rooms, facilities.",
+        "Add description + policies from listing-copy.md.",
+        "Upload photos (recommended: cover + room + amenity shots).",
+        "Set room rates, availability calendar, and cancellation policy.",
+        "Connect calendar: Extranet → Rates & availability → iCal export (or channel manager).",
+        "Complete 'Bookability' checks (facilities, policies, photos).",
+        "Submit for activation; booking.com reviews within ~2 weeks.",
+        "Confirm the property is visible by searching it on booking.com."
+      ]
+    },
+    "expedia": {
+      "label": "Expedia",
+      "signup": "List via Expedia Partner Solutions (expediaconnect.com / partnercentral).",
+      "steps": [
+        "Register your property in Partner Central.",
+        "Enter property + room details and facilities.",
+        "Add photos and description.",
+        "Set rates and availability.",
+        "Connect calendar: Partner Central → Connectivity → iCal / direct (or channel manager).",
+        "Activate and verify the public property page."
+      ]
+    },
+    "hotels.com": {
+      "label": "Hotels.com",
+      "signup": "Hotels.com shares Expedia's inventory — list once via Expedia Partner Central, availability flows through.",
+      "steps": [
+        "Confirm the property is active in Expedia Partner Central.",
+        "Verify it appears on hotels.com by searching for it.",
+        "Ensure photos/rates are synced (same content as Expedia).",
+        "Optionally run a hotels.com-specific promo via the partner dashboard."
+      ]
+    }
+  },
+  "channel_managers": {
+    "cloudbeds": "Connect new channels inside Cloudbeds → Channels → add Airbnb/Vrbo/Booking.com. Rates + calendar sync automatically.",
+    "lodgify": "Lodgify → Channels → connect OTA channels, or use the 'direct website booking widget' for own-site bookings.",
+    "freetobook": "FreeToBook → 'Channels' tab → connect OTAs; iCal export for others.",
+    "siteminder": "SiteMinder → Channels → add each platform as a channel; it syncs rates/availability."
+  },
+  "ical": {
+    "import": "Add the property's main iCal URL to each platform's calendar-sync settings so all calendars stay in one place.",
+    "export": "If the owner manages manually, export one master iCal and import it into each new platform to prevent double-bookings."
+  }
+}

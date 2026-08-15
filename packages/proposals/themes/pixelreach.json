@@ -1,0 +1,38 @@
+{
+  "$comment": "Pixelreach Digital brand + proposal theme. EDIT THIS ONE FILE to rebrand/proposals.",
+  "brand": {
+    "name": "Pixelreach Digital",
+    "tagline": "We build simple, fast, trustworthy websites & get places listed where guests already search.",
+    "email": "pixelreach.digital.ceo@gmail.com",
+    "phone": "618-567-1764",
+    "website": "pixelreach.digital"
+  },
+  "colors": {
+    "primary": "#1d4ed8",
+    "primaryDark": "#1e40af",
+    "accent": "#3b82f6",
+    "bg": "#ffffff",
+    "ink": "#0f172a",
+    "muted": "#475569",
+    "lightBg": "#eff6ff",
+    "border": "#bfdbfe"
+  },
+  "tiers": [
+    { "id": "basic",    "name": "Basic",    "price": 50,  "platforms": 1, "featured": false,
+      "features": ["Listing created on 1 booking platform", "SEO-friendly title + photos+description", "Calendar set up", "Launch + verification"] },
+    { "id": "standard", "name": "Standard", "price": 90,  "platforms": 2, "featured": true,
+      "features": ["Listing created on 2 booking platforms", "SEO-friendly title + photos+description", "Calendar set up + synced", "Rate / min-stay rules applied", "Launch + verification"] },
+    { "id": "pro",      "name": "Pro",      "price": 150, "platforms": 3, "featured": false,
+      "features": ["Listing created on 3 booking platforms", "SEO-friendly title + photos+description", "Calendar set up + synced", "Rate / min-stay rules applied", "Photo & amenity refresh guidance", "Launch + verification + support"] }
+  ],
+  "upsell": {
+    "enabled": true,
+    "blurb": "Need a simple website too? We build fast, mobile-friendly sites that match your brand and feature your Book button — ask for a quote."
+  },
+  "nextSteps": [
+    "Reply to this email — pick a package and confirm your platforms.",
+    "Send us your photos + a 5-minute property checklist (we send it).",
+    "We create your listing(s) and connect your calendar.",
+    "We verify everything is live and visible before you pay."
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "$comment": "Materials checklist we send the owner (the '5-minute checklist'). Values are example placeholders.",
+  "questions": [
+    {"id": "name", "label": "Property name", "placeholder": "e.g. Treehouse Cabin", "required": true},
+    {"id": "type", "label": "Property type", "placeholder": "Cabin / B&B / Hotel / Vacation rental"},
+    {"id": "city", "label": "City / area", "placeholder": "e.g. Gold Hill, CO"},
+    {"id": "address", "label": "Address (for maps, kept private on most platforms)", "placeholder": "Street, City, State ZIP"},
+    {"id": "guest_count", "label": "Max guests", "placeholder": "e.g. 4"},
+    {"id": "bedrooms", "label": "Bedrooms", "placeholder": "e.g. 2"},
+    {"id": "beds", "label": "Beds", "placeholder": "e.g. 3"},
+    {"id": "bathrooms", "label": "Bathrooms", "placeholder": "e.g. 1.5"},
+    {"id": "title", "label": "Listing title (we'll polish it)", "placeholder": "e.g. Cozy treehouse with mountain views"},
+    {"id": "description", "label": "Short description (2–4 sentences)", "placeholder": "What makes your place special?"},
+    {"id": "highlights", "label": "Top 3 highlights", "placeholder": "e.g. hot tub, view, near trailhead"},
+    {"id": "amenities", "label": "Amenities (pick from list)", "placeholder": "WiFi, parking, kitchen, AC, washer, pet-friendly…"},
+    {"id": "house_rules", "label": "House rules", "placeholder": "No smoking, no parties, pets ok…"},
+    {"id": "checkin", "label": "Check-in / check-out", "placeholder": "e.g. 3 PM / 11 AM"},
+    {"id": "price", "label": "Base nightly rate ($)", "placeholder": "e.g. 125"},
+    {"id": "min_stay", "label": "Minimum stay (nights)", "placeholder": "e.g. 2"},
+    {"id": "photos", "label": "Photos (we can guide you on which to take)", "placeholder": "5–10 photos: exterior, living, kitchen, bedrooms, view"},
+    {"id": "contact", "label": "Owner contact name / phone", "placeholder": "For the platform host account"},
+    {"id": "current_system", "label": "Current booking system (if any)", "placeholder": "None / Cloudbeds / Lodgify / SiteMinder / manual calendar…"}
+  ]
+}

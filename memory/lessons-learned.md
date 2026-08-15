@@ -8,3 +8,12 @@
   scripts. If a widget stops working after hardening, check CSP before suspecting the widget.
 - 2026-08-07: Chatbot FAQ matching runs BEFORE the AI call, so "pricing"/"hours" questions are answered locally
   and never reach the AI — that's intended, not a bug. Use genuinely unknown phrases when testing the AI path.
+- 2026-08-15: OpenRouter free models (`:free` variants) cost $0 but are rate-capped PER ACCOUNT: 50 requests/day
+  with no credits, 1,000/day after a ONE-TIME $10 credit deposit (never expires, free models still cost $0),
+  20 req/min. FAILED/429 requests also count against the daily quota — so cap openrouter concurrency low
+  (we set 2) and never retry-loop against free endpoints. Recommendation: make the one-time $10 deposit if you
+  want to "code a lot" on free models (50/day can't sustain heavy coding). Enforce never-billing by keeping every
+  openrouter model `:free` and falling back to Vercel instead of paid OpenRouter models (checked in ~/.omo/omo.jsonc).
+- 2026-08-15: OpenRouter model IDs changed — old `-free` suffixed slugs (e.g. nvidia/nemotron-3-super-free) no
+  longer exist; current free IDs use `:free` variants (e.g. nvidia/nemotron-3-super-120b-a12b:free,
+  cohere/north-mini-code:free). Verified against /api/v1/models on 2026-08-15.
