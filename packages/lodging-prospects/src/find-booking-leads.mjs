@@ -5,6 +5,7 @@
 // Finds bookable lodging, checks booking-platform presence (Airbnb/Vrbo/Booking.com/Expedia/Hotels.com)
 // + own-site booking systems, scores HOT/WARM/COOL for the "get you listed where guests search" pitch.
 import {readFileSync, mkdirSync, writeFileSync} from 'node:fs';import {resolve,dirname} from 'node:path';import {fileURLToPath} from 'node:url';
+import {domMatch,detectSystems,hasBookingLink,scoreLead,slugify} from '../../testing/unit/booking.mjs';
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const PLATFORMS=JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../data/platforms.json'),'utf8')).platforms;
 const TYPES=['hotel','hostel','cabin','bed-and-breakfast','vacation-rental'];
@@ -19,7 +20,6 @@ const KEY=process.env.GOOGLE_PLACES_API_KEY||'';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const esc=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const host=(u)=>{try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase();}catch{return '';}}
-const domMatch=(h,domains)=>domains.some(d=>h===d||h.endsWith('.'+d)||h.includes('.'+d+'/')||h.includes(d+'.'));
 
 async function placesSearch(q){const fm=['places.displayName','places.formattedAddress','places.nationalPhoneNumber','places.websiteUri','places.rating','places.userRatingCount','places.primaryType','places.businessStatus'].join(',');const res=await fetch('https://places.googleapis.com/v1/places:searchText',{method:'POST',headers:{'Content-Type':'application/json','X-Goog-Api-Key':KEY,'X-Goog-FieldMask':fm},body:JSON.stringify({textQuery:q,maxResultCount:Math.min(MAX,20)}),signal:AbortSignal.timeout(20000)});if(!res.ok)throw new Error('Places '+res.status);return (await res.json()).places||[];}
 
@@ -37,26 +37,12 @@ async function scanOwnSite(url){
   if(!url)return r;
   let html='';try{const res=await fetch(url,{signal:AbortSignal.timeout(15000),redirect:'follow'});if(res.ok)html=await res.text();}catch{return r;}
   const h=html.toLowerCase();
-  r.hasBookingLink=/(book now|book here|reserve|check availability|book your stay|availability\b)/i.test(html);
-  const known=[
-    ['Cloudbeds',/cloudbeds|myallocator/],['Lodgify',/lodgify/],['Freetobook',/freetobook/],
-    ['SiteMinder',/siteminder/],['Little Hotelier',/littlehotelier/],['Hostaway',/hostaway/],
-    ['Guesty',/guesty/],['Checkfront',/checkfront/],['Booking Kit',/bookingkit|secu-rez|rezstream/],
-    ['ResNexus',/resnexus/],['Bookeo',/bookeo/],['RegiFox',/regifox/],['TravelClick',/travelclick|synxis/]
-  ];
-  for(const[n,re]of known)if(re.test(h)){r.systems.push(n);r.evidence.push(n+' referenced on site');}
+  r.hasBookingLink=hasBookingLink(html);
+  for(const n of detectSystems(html)){r.systems.push(n);r.evidence.push(n+' referenced on site');}
   for(const p of PLATFORMS){const re=new RegExp(p.domains.map(d=>d.replace('.','\\.')).join('|'));if(re.test(html)){r.systems.push(p.label+' link');r.evidence.push('Links to '+p.label);r.hasBookingLink=true;}}
   r.systems=[...new Set(r.systems)];r.evidence=[...new Set(r.evidence)].slice(0,6);
   return r;
 }
-
-function score(presence,own,reviews,rating,website){const present=presence.filter(p=>p.found).length;let s=0;const why=[];
-  if(present===0){s+=50;why.push('No booking-platform presence');}else if(present<=2){s+=25;why.push('Only '+present+'/5 platforms');}else{s+=10;why.push('On '+present+'/5 platforms');}
-  if(own.hasBookingLink){s+=10;why.push('Has own-site booking');}else{s+=20;why.push('No direct booking on own site');}
-  if(!website){s+=15;why.push('No website');}
-  if(reviews>=25){s+=15;why.push(reviews+' reviews');}else if(reviews>=5)s+=8;
-  if(rating>=4)s+=5;
-  const os=Math.min(s,100);return{opportunityScore:os,priority:os>=55?'HOT':os>=35?'WARM':'COOL',why};}
 
 function csvOut(leads){const e=s=>`"${String(s??'').replace(/"/g,'""')}"`;console.log('priority,score,name,type,phone,website,presence,bookingSystems,why');leads.forEach(l=>console.log([l.priority,l.opportunityScore,e(l.name),e(l.type),e(l.phone),e(l.website),e(l.presence.filter(p=>p.found).map(p=>p.label).join('|')),e((l.own.systems||[]).join('|')),e(l.why.join('; '))].join(',')));}
 
@@ -70,7 +56,7 @@ function csvOut(leads){const e=s=>`"${String(s??'').replace(/"/g,'""')}"`;consol
     const name=p.displayName?.text||singleName||'';if(!name)continue;
     const own=skipScan?{site:p.websiteUri||'',hasBookingLink:false,systems:[],evidence:[]}:await scanOwnSite(p.websiteUri);
     const presence=[];for(const pl of PLATFORMS){const chk=await checkPresence(name,pl,loc||opt('city',''));presence.push(chk);await sleep(500);}
-    const sc=score(presence,own,p.userRatingCount||0,p.rating||null,p.websiteUri||'');
+    const sc=scoreLead(presence,own,p.userRatingCount||0,p.rating||null,p.websiteUri||'');
     leads.push({name,phone:p.nationalPhoneNumber||'',address:p.formattedAddress||'',website:p.websiteUri||'',rating:p.rating??null,reviews:p.userRatingCount??0,type:p.primaryType||'',own,presence,...sc});
     console.error(`· ${sc.priority} ${sc.opportunityScore} ${name} — ${presence.filter(x=>x.found).length}/5 platforms`);
   }
@@ -81,7 +67,7 @@ function csvOut(leads){const e=s=>`"${String(s??'').replace(/"/g,'""')}"`;consol
   console.log(`\n🏨 "${loc||singleName}" → ${leads.length} bookable properties\n`);
   leads.forEach((l,i)=>{const t=l.priority==='HOT'?'🔥 HOT':l.priority==='WARM'?'☀️  WARM':'❄️  COOL';console.log(`${String(i+1).padStart(2)}. [${t}] ${l.name} (${l.opportunityScore}/100)\n     ${l.phone||'no phone'} · ${l.website||'NO WEBSITE'} · ⭐${l.rating??'—'} (${l.reviews})\n     Presence: ${l.presence.filter(p=>p.found).map(p=>p.label).join(', ')||'none'} · Systems: ${(l.own.systems||[]).join(', ')||'—'} · Direct booking: ${l.own.hasBookingLink?'yes':'no'}\n     ${l.why.join(' · ')}\n`);});
   console.log('Tip: pitch “get listed where guests already search” on HOT/WARM leads → /propose-lodging. Verify evidence before outreach.');
-  const citySlug=(loc||singleName).replace(/[^a-z0-9]+/gi,'-').toLowerCase();
+  const citySlug=slugify(loc||singleName);
   const outDir=resolve(ROOT,'lodging-prospects/out');mkdirSync(outDir,{recursive:true});
   writeFileSync(resolve(outDir,citySlug+'.json'),JSON.stringify({city:loc||singleName,count:leads.length,leads},null,2));
   const mdDir=resolve(ROOT,'memory/leads');mkdirSync(mdDir,{recursive:true});

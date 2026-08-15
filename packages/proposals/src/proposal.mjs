@@ -20,6 +20,7 @@
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { slugify, platformLabels } from '../../testing/unit/booking.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '../../..');
@@ -34,15 +35,13 @@ const brand = theme.brand, C = theme.colors;
 let tiers = theme.tiers;
 if (opt('package-json')) tiers = JSON.parse(readFileSync(resolve(ROOT, opt('package-json')), 'utf8'));
 
-const slugify = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const today = new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
 const city = opt('city', '');
 const contact = opt('contact', '');
 const platformsRaw = (opt('platforms', 'airbnb,vrbo') || '').split(',').map(s => s.trim()).filter(Boolean);
-const PLATFORM_LABEL = { airbnb: 'Airbnb', vrbo: 'Vrbo', 'booking.com': 'Booking.com', expedia: 'Expedia', 'hotels.com': 'Hotels.com' };
-const platforms = platformsRaw.map(p => PLATFORM_LABEL[p] || p);
+const platforms = platformLabels(platformsRaw.join(','));
 const bookingSystem = opt('booking-system', '');
 const tierId = opt('tier', 'standard');
 const tier = tiers.find(t => t.id === tierId) || tiers.find(t => t.featured) || tiers[0];
