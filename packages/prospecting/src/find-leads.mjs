@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Lead Finder. Usage: find-leads.mjs "<niche>" "<city>" [--audit --csv|--json --max N]
+import '../../../env.mjs';
 import {spawnSync} from 'node:child_process';import {resolve,dirname} from 'node:path';import {fileURLToPath} from 'node:url';
 const A=resolve(dirname(fileURLToPath(import.meta.url)),'../../audit/src/audit.mjs');
 const args=process.argv.slice(2),p=args.filter(a=>!a.startsWith('--')),niche=p[0],loc=p[1],doAudit=args.includes('--audit'),asCsv=args.includes('--csv'),asJson=args.includes('--json'),mi=args.indexOf('--max'),MAX=mi>=0?(parseInt(args[mi+1])||20):20;

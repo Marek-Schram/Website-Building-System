@@ -1,5 +1,11 @@
 #!/usr/bin/env node
-import {readFileSync,existsSync} from 'node:fs';import {resolve} from 'node:path';
-const s=process.argv[2];if(!s){console.error('Usage: build-client.mjs "<slug>"');process.exit(1);}
-const c=resolve(import.meta.dirname,'..','clients',s,'brand','brand.config.json');if(!existsSync(c)){console.error(`No config for "${s}".`);process.exit(1);}
-const cfg=JSON.parse(readFileSync(c,'utf8'));console.log(`Building ${cfg.businessName} (theme: ${cfg.theme})`);console.log('Add-ons:',(cfg.addons||[]).join(', ')||'none');console.log('→ TODO Claude: astro build + add-ons → dist/'+s+'; copy headers.template → public/_headers.');
+// Thin wrapper so `npm run build:client -- <slug>` and existing skill/docs references keep working;
+// the real implementation lives in packages/site-builder/src/build.mjs.
+import { spawnSync } from 'node:child_process';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const target = resolve(__dirname, '../packages/site-builder/src/build.mjs');
+const r = spawnSync('node', [target, ...process.argv.slice(2)], { stdio: 'inherit' });
+process.exit(r.status ?? 1);

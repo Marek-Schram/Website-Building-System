@@ -24,6 +24,7 @@
  * Writes opportunities/<slug>/report.md (+ report.json) — a client-ready
  * "here's what your current site is missing" document.
  */
+import '../../../env.mjs';
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';

@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .env.*
+!.env.example
 *.log
 .DS_Store
 .wrangler/
@@ -11,9 +12,12 @@ clients/**/assets/*.psd
 *.jsonl
 leads.json
 playwright-report/
+test-results/
 
 # generated outputs
 prospect-briefs/
+opportunities/*/
+!opportunities/example-domain/
 lodging-prospects/out/
 proposals/out/
 listing-kit/out/

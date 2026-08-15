@@ -13,7 +13,10 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '20' }
       - name: Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        # Pinned to v0.36.0 (post-incident): trivy-action tags 0.0.1–0.34.2 were compromised via imposter
+        # commits in March 2026 (credential-stealer injected into the action) — this run was failing outright
+        # because the old @0.28.0 tag it was pinned to no longer resolves. v0.36.0 is the current safe release.
+        uses: aquasecurity/trivy-action@v0.36.0
         with: { scan-type: 'fs', scan-ref: '.', severity: 'CRITICAL,HIGH', format: 'sarif', output: 'trivy.sarif' }
         continue-on-error: true
       - name: Upload SARIF

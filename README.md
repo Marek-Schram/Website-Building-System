@@ -25,6 +25,7 @@ an AI security + QA team that fixes its own findings, automated CI, and persiste
 | `packages/addons/` | Common add-ons library (incl. **free chatbot**) → `/add-feature` |
 | `packages/parity/` | Capture an old site + prove parity → `/match-site` |
 | `packages/testing/` | Human-like + E2E + unit + dead-code → `/test-site`, `/blind-review` |
+| `packages/site-builder/` | Assembles a REAL client site from brand+content+theme+add-ons → `/build-site` |
 | `.claude/agents/` | security-reviewer, pentester, visual-qa, qa-debugger, blind-reviewer, parity-reviewer, **opportunity-scout** |
 | `.claude/{skills,rules,hooks,settings.json}` | 15 skills + rules + deterministic guards |
 | `.mcp.json` · `.github/workflows/` | free MCP servers · automated CI |
@@ -37,4 +38,4 @@ Astro (static→hybrid) · Tailwind · Cloudflare Pages (WAF+DDoS+SSL) · Google
 HTML demos + add-ons · parity capture + opportunity detector (no keys) · optional Stripe/Snipcart/Toast/Calendly.
 
 ---
-*Scaffold for Claude Code. The audit, lead-finder, demo, add-ons, testing, parity, and opportunity scripts are real and runnable.*
+*Scaffold for Claude Code. The audit, lead-finder, demo, add-ons, site-builder, testing, parity, and opportunity scripts are real and runnable.*

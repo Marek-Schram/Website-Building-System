@@ -9,7 +9,10 @@ import {domMatch,detectSystems,hasBookingLink,scoreLead,slugify} from '../../tes
 const ROOT=resolve(dirname(fileURLToPath(import.meta.url)),'../../..');
 const PLATFORMS=JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)),'../data/platforms.json'),'utf8')).platforms;
 const TYPES=['hotel','hostel','cabin','bed-and-breakfast','vacation-rental'];
-const args=process.argv.slice(2),pos=args.filter(a=>!a.startsWith('--')),loc=pos[0];
+// loc = the leading positional arg (city), if present. NOT args.filter(!startsWith('--'))[0] — in the
+// keyless single-property mode (--url/--name/--city, no positional at all) that would grab whichever
+// flag's VALUE happens to come first in argv (e.g. the --url) and mislabel every output as that URL.
+const args=process.argv.slice(2),loc=(args[0]&&!args[0].startsWith('--'))?args[0]:undefined;
 const asJson=args.includes('--json'),asCsv=args.includes('--csv'),skipScan=args.includes('--skip-site-scan');
 const opt=(k,d=null)=>{const i=args.indexOf('--'+k);return i>=0&&args[i+1]&&!args[i+1].startsWith('--')?(args[i+1]||d):d;};
 const mi=args.indexOf('--max'),MAX=mi>=0?(parseInt(args[mi+1])||20):20;

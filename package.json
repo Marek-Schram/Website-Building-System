@@ -6,6 +6,7 @@
   "scripts": {
     "new": "node scripts/new-client.mjs",
     "build:client": "node scripts/build-client.mjs",
+    "build:site": "node packages/site-builder/src/build.mjs",
     "deploy": "node scripts/deploy.mjs",
     "audit": "node packages/audit/src/audit.mjs",
     "find-leads": "node packages/prospecting/src/find-leads.mjs",

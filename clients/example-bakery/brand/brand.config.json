@@ -1,7 +1,8 @@
 { "businessName":"Sweet Peter's Bakery","tagline":"Fresh-baked every morning in St. Peters, MO","theme":"harvest","industry":"bakery",
   "brand":{"colors":{"primary":"#b45309","secondary":"#3f2a1a","accent":"#92400e"},"font":{"heading":"Fraunces","body":"Inter"},"logo":"assets/logo.svg"},
   "contact":{"phone":"(636) 555-0142","email":"hello@sweetpeters.example","address":"12 Main St, St. Peters, MO 63376","hours":"Tue-Sun 6am-2pm"},
-  "features":{"contactForm":true,"booking":false,"payments":false,"store":false},"addons":["menu","online-ordering","reviews","map","hours"],
+  "features":{"contactForm":true,"booking":false,"payments":false,"store":false},"addons":["menu","online-ordering","reviews","map","hours","chatbot"],
+  "addonConfig":{"online-ordering":{"provider":"Toast","url":"https://order.example.com/sweetpeters"}},
   "parityBaseline":"","opportunityReport":"",
   "marketing":{"googleBusinessProfile":true,"socialLinks":{"instagram":"sweetpeters","facebook":"sweetpeters","youtube":""}},
   "deploy":{"host":"cloudflare-pages","domain":"sweetpeters.example"} }
