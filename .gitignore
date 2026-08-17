@@ -13,6 +13,7 @@ clients/**/assets/*.psd
 leads.json
 playwright-report/
 test-results/
+command-center/test/screenshots/
 
 # generated outputs
 prospect-briefs/

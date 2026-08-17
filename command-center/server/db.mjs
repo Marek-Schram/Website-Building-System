@@ -8,7 +8,9 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = resolve(__dirname, '../data');
+// COMMAND_CENTER_DATA_DIR lets the test suite point at a throwaway directory instead of the real
+// pipeline.db — nothing about normal (non-test) usage changes since the env var is otherwise unset.
+const DATA_DIR = process.env.COMMAND_CENTER_DATA_DIR ? resolve(process.env.COMMAND_CENTER_DATA_DIR) : resolve(__dirname, '../data');
 mkdirSync(DATA_DIR, { recursive: true });
 
 const db = new Database(resolve(DATA_DIR, 'pipeline.db'));

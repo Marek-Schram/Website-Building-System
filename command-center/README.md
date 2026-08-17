@@ -60,13 +60,41 @@ The topbar's **Follow-ups** button (badge = overdue count) opens every deal with
 both business lines, grouped Overdue / Next 14 days / Later — so a date doesn't just sit quietly on a card
 in whatever column it's in. Click a row to jump straight into that deal's drawer.
 
+## Testing
+`npm run test:command-center` runs the whole app's test suite — nothing here was previously covered by
+automated tests, only one-off manual/curl checks.
+- **`command-center/test/api.test.mjs`** (vitest) — boots the real Express router against a throwaway SQLite
+  dir (`COMMAND_CENTER_DATA_DIR`, never the real `pipeline.db`) and exercises every route over real HTTP:
+  auth, deals CRUD, the full parity capture→build→check flow (pinned to an exact, hand-verified
+  regression/preserved/improvement result against fixtures in `test/fixtures/`), invoicing generate→sent→paid,
+  marketing-kit flag→check→file-serve (including a blocked path-traversal attempt), the lodging
+  proposal→listing-kit config-reuse flow, and follow-up date-boundary grouping. Self-cleaning — every
+  artifact it creates is namespaced `vitest-cc-*` and removed in `afterAll` (and swept again on the next
+  run's `beforeAll`, in case a prior run crashed).
+- **`command-center/test/board.e2e.mjs`** (Playwright, `test/playwright.config.mjs`) — a real Chromium
+  instance clicking through one full deal lifecycle: login → add lead → parity capture → start client →
+  build → parity check → create/send/pay an invoice → flag/find a marketing kit → the follow-ups panel.
+  `webServer` boots the app against its own throwaway data dir and tears it down after. Screenshots land in
+  `test/screenshots/` (gitignored) at each milestone. This config points `launchOptions.executablePath`
+  straight at the repo's local Chromium install rather than relying on a browser-automation MCP tool, since
+  this environment's only has a plain Chromium build, not the `chrome` channel some tools expect.
+- This suite is what caught a real, pre-existing bug: submitting the wrong password on the login screen
+  silently swallowed the "Wrong password" message — `api.js`'s generic 401-handler treated `/login`'s own
+  401 the same as "your session expired," re-rendering the login screen (and orphaning the very error box
+  it was about to write into) instead of just showing the message. Fixed in `api.js`. A second, milder issue
+  the same run surfaced: a parity check that correctly found real regressions showed a scary red "failed"
+  toast, indistinguishable from an actual crash — fixed in `drawer.js` so a completed diagnosis reads as
+  "finished," leaving the pass/fail verdict itself to the chip where it belongs.
+
 ## Notes
 - Nothing here is exposed to the network beyond `127.0.0.1` — there's no reason to change that for a tool
   built around a single shared password.
 - Sessions live in server memory only; restarting the server requires signing in again.
 - Build phases: Phase 1 covered the website-client funnel end to end. Phase 2 extended the same board to
   lodging listings — presence detection, a real proposal/listing-kit config flow, and the add-ons section
-  correctly staying website-only (it needs a `clients/<slug>` folder lodging deals don't have). Phase 3
-  (done) adds the polish: parity checks, real invoicing, marketing-kit flag/detect, and follow-up reminders.
+  correctly staying website-only (it needs a `clients/<slug>` folder lodging deals don't have). Phase 3 added
+  the remaining polish: parity checks, real invoicing, marketing-kit flag/detect, and follow-up reminders.
+  Phase 4 (done) closes the loop those phases left open: a real, repeatable, self-cleaning test suite
+  covering the whole app (see Testing above) — no more "verified with curl and trust me."
 - `find-booking-leads`' presence checks scrape DuckDuckGo/Bing (keyless, best-effort) — repeated rapid checks
   can slow down or get rate-limited; it's bounded by the tool's own timeouts either way, never hangs forever.

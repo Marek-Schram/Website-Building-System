@@ -10,9 +10,16 @@ async function req(method, path, body) {
     headers: body !== undefined ? { 'Content-Type': 'application/json' } : {},
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 401) { onUnauthorized(); throw new ApiError('Not signed in'); }
   const isJson = (res.headers.get('content-type') || '').includes('application/json');
   const data = isJson ? await res.json().catch(() => null) : null;
+  if (res.status === 401) {
+    // A 401 from /login itself just means "wrong password" — that's a normal login-form error, not an
+    // expired session, and we're already on the login screen. Re-rendering it here (via onUnauthorized)
+    // would wipe out the very error box we're about to write the message into. Every OTHER route's 401
+    // really does mean "not signed in anymore" and should bounce back to the login screen.
+    if (path !== '/login') onUnauthorized();
+    throw new ApiError(data?.error || 'Not signed in');
+  }
   if (!res.ok) throw new ApiError(data?.error || `Request failed (${res.status})`);
   return data;
 }

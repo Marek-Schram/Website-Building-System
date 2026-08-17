@@ -124,7 +124,13 @@ function renderPresenceSection(deal) {
 
 // Runs a one-shot action button that may kick off a background job; toasts + refreshes when it's done.
 // Used by sections that don't have a shared console box (parity, invoicing, marketing kit).
-async function runSimpleAction(btn, fn, refresh) {
+//
+// `neutralOutcome` is for jobs whose underlying process legitimately exits non-zero on a normal, ON-TOPIC
+// result rather than a crash — parity-check.mjs exits 1 when it finds real regressions, which is the tool
+// doing its job, not failing at it. Without this, the toast would read "Run parity check failed" for a
+// check that ran perfectly and correctly caught something to fix; the actual pass/fail verdict already
+// renders clearly as its own chip right after refresh, so the toast just needs to say the run finished.
+async function runSimpleAction(btn, fn, refresh, { neutralOutcome = false } = {}) {
   btn.disabled = true;
   const orig = btn.textContent;
   try {
@@ -133,7 +139,8 @@ async function runSimpleAction(btn, fn, refresh) {
       btn.textContent = 'Running…';
       await new Promise(resolveJob => watchJob(result.jobId, {
         onDone: msg => {
-          toast(msg.status === 'done' ? `${orig} finished` : `${orig} failed — see activity log`, { error: msg.status !== 'done' });
+          if (neutralOutcome) toast(`${orig} finished — see result below`);
+          else toast(msg.status === 'done' ? `${orig} finished` : `${orig} failed — see activity log`, { error: msg.status !== 'done' });
           resolveJob();
         },
       }));
@@ -162,7 +169,7 @@ function renderParitySection(deal, refresh) {
   }
   const row = el(`<div class="action-row" style="margin-bottom:.4rem"></div>`);
   const runBtn = el(`<button class="btn sm">Run parity check</button>`);
-  runBtn.addEventListener('click', () => runSimpleAction(runBtn, () => api.runParityCheck(deal.id), refresh));
+  runBtn.addEventListener('click', () => runSimpleAction(runBtn, () => api.runParityCheck(deal.id), refresh, { neutralOutcome: true }));
   row.appendChild(runBtn);
   wrap.appendChild(row);
   if (deal.parity_status) {
