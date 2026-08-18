@@ -2,10 +2,11 @@
   "name": "sitewright",
   "version": "1.0.0",
   "type": "module",
-  "description": "Claude Code base project: find clients, diagnose their current site, build one emailable prospect brief, and deliver cheap/fast/secure small-business sites with common add-ons (incl. a free chatbot), website-parity, tests, and a free-marketing toolkit.",
+  "description": "Claude Code base project: find clients, diagnose what's weak on their current site, build one emailable prospect brief, and deliver cheap/fast/secure small-business sites with common add-ons (incl. a free chatbot), website-parity, tests, and a free-marketing toolkit.",
   "scripts": {
     "new": "node scripts/new-client.mjs",
     "build:client": "node scripts/build-client.mjs",
+    "build:site": "node packages/site-builder/src/build.mjs",
     "deploy": "node scripts/deploy.mjs",
     "audit": "node packages/audit/src/audit.mjs",
     "find-leads": "node packages/prospecting/src/find-leads.mjs",
@@ -18,21 +19,31 @@
     "test:human": "node packages/testing/harness/human-test.mjs",
     "test:unit": "vitest run",
     "test:e2e": "playwright test packages/testing/e2e",
+    "test:command-center": "vitest run command-center/test/api.test.mjs && playwright test --config=command-center/test/playwright.config.mjs",
     "deadcode": "knip",
     "brief": "node packages/prospect-brief/src/brief.mjs",
     "booking-leads": "node packages/lodging-prospects/src/find-booking-leads.mjs",
+    "booking-opportunities": "node packages/lodging-prospects/src/lodging-opportunities.mjs",
     "propose": "node packages/proposals/src/proposal.mjs",
-    "listing-kit": "node packages/listing-kit/src/kit.mjs"
+    "listing-kit": "node packages/listing-kit/src/kit.mjs",
+    "invoice": "node packages/invoicing/src/invoice.mjs",
+    "command-center": "node command-center/server/index.mjs"
   },
   "engines": {
     "node": ">=18"
   },
   "license": "MIT",
   "devDependencies": {
-    "@playwright/test": "^1.50.0",
     "@axe-core/playwright": "^4.10.0",
-    "vitest": "^3.0.0",
+    "@playwright/test": "^1.50.0",
     "@vitest/coverage-v8": "^3.0.0",
-    "knip": "^5.0.0"
+    "knip": "^5.0.0",
+    "vitest": "^3.0.0"
+  },
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "express": "^5.2.1",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.5"
   }
 }

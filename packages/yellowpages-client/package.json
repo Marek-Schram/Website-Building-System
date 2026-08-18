@@ -1,0 +1,13 @@
+{
+  "name": "yellowpages-client",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Yellowpages API client for business discovery and technology aversion detection",
+  "main": "src/yellowpages-client.mjs",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": ["yellowpages", "business", "leads", "prospecting", "tech-aversion"],
+  "author": "SiteWright Team",
+  "license": "MIT"
+}

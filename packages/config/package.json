@@ -1,0 +1,13 @@
+{
+  "name": "config",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Configuration management for enhanced lead finding system",
+  "main": "src/config.mjs",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": ["config", "lead-finding", "yellowpages", "tech-aversion"],
+  "author": "SiteWright Team",
+  "license": "MIT"
+}

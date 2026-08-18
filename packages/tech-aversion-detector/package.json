@@ -1,0 +1,16 @@
+{
+  "name": "tech-aversion-detector",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Detect technology-averse businesses using multiple indicators",
+  "main": "src/tech-aversion-detector.mjs",
+  "scripts": {
+    "test": "vitest"
+  },
+  "keywords": ["tech-aversion", "business-analysis", "digital-indices"],
+  "author": "SiteWright Team",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
