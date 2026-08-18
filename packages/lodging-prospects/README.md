@@ -1,16 +1,29 @@
 # lodging-prospects
 
-Find bookable lodging (hotels, hostels, cabins, B&Bs, vacation rentals) in a city and score who's
-**missing from the top-5 booking platforms** (Airbnb, Vrbo, Booking.com, Expedia, Hotels.com) so you can
-pitch "I'll get you listed where guests already search."
+Find bookable lodging (hotels, hostels, cabins, B&Bs, vacation rentals) in a city and score who needs help
+getting more direct bookings — "you're losing bookings to phone tag" or "you don't even have a way to book
+online" — so you can pitch fixing it, with a "get listed where guests search" upsell as supporting evidence.
 
 ## What it does
 1. **Find** bookable properties via Google Places (per property type).
-2. **Check presence** on each of the 5 platforms with a keyless web search (DuckDuckGo, falls back to Bing).
-3. **Scan each property's own site** for booking links and the booking system in use (Cloudbeds, Lodgify,
-   Freetobook, SiteMinder, Little Hotelier, Hostaway, Guesty, Checkfront, BookingKit, ResNexus, Bookeo,
-   RegiFox, TravelClick…).
-4. **Score** HOT / WARM / COOL + opportunity score (0–100) and write JSON + `memory/leads/` markdown.
+2. **Scan each property's own site** for a direct booking link and the booking system in use (Cloudbeds,
+   Lodgify, Freetobook, SiteMinder, Little Hotelier, Hostaway, Guesty, Checkfront, BookingKit, ResNexus,
+   Bookeo, RegiFox, TravelClick…) — fetched directly, this is the reliable signal.
+3. **Check presence** on the top-5 platforms (Airbnb, Vrbo, Booking.com, Expedia, Hotels.com) with a keyless
+   web search (DuckDuckGo, falls back to Bing) — **best-effort and UNVERIFIED, see caveat below**.
+4. **Score** HOT / WARM / COOL + opportunity score (0–100), from the reliable signals only, and write JSON +
+   `memory/leads/` markdown.
+
+## Accuracy caveat — platform presence is not reliable enough to score or claim as fact
+Verified 2026-08-18: scraping Bing/DuckDuckGo result pages for "is property X on platform Y" produces mostly
+false negatives. Bing wraps its real organic results in undocumented `bing.com/ck/a?...&u=<base64>` tracking
+redirects rather than linking directly; a naive regex scrape either matches nothing real or (worse) latches
+onto unrelated domains mentioned elsewhere on the page. Confirmed hotel chains that are definitely listed on
+Expedia (verified independently) scored "0/5 platforms" from this scraper. Because of this, **platform
+presence is surfaced as unscored, clearly-labeled "unverified" evidence only** — `scoreLead()` in
+`packages/testing/unit/booking.mjs` does not take it as an input at all. "No evidence found" means "our
+keyless search didn't confirm it," never "confirmed absent" — always verify manually before telling a
+prospect they're missing from a platform. Full investigation: `memory/lessons-learned.md` (2026-08-18).
 
 ## Usage
 ```
@@ -33,13 +46,12 @@ node packages/lodging-prospects/src/find-booking-leads.mjs --url "https://www.tr
 | `--url <site> --name "<name>"` | check a single property without the Places key |
 
 ## Output
-- `lodging-prospects/out/<city>.json` — full lead detail incl. presence evidence URLs + detected systems.
+- `lodging-prospects/out/<city>.json` — full lead detail incl. unverified presence evidence URLs + detected systems.
 - `memory/leads/lodging-<city>.md` — one-line table per lead for outreach tracking (gitignored data stays out; leads are public info).
-- Console: HOT 🔥 / WARM ☀️ / COOL ❄️ list with score + why.
+- Console: HOT 🔥 / WARM ☀️ / COOL ❄️ list with score + why (score is never based on platform presence — see caveat above).
 
-Presence checks are best-effort keyless signals — **verify evidence before outreach** (each hit includes the
-URL it came from). Own-site scans are the reliable signal: they tell you exactly what booking system each
-property already runs, which the proposal then references ("works with your current setup").
+Own-site scans are the reliable signal: they tell you exactly what booking system each property already
+runs, which the proposal then references ("works with your current setup").
 
 ## Going deeper on one property: lodging-opportunities.mjs
 
@@ -51,7 +63,8 @@ severity-tagged report — see `.claude/skills/find-booking-opportunities/SKILL.
 node packages/lodging-prospects/src/lodging-opportunities.mjs "The Treehouse Cabin" --url "https://www.treehousecabin.com" --city "Gold Hill" --reviews 4 --rating 4.8
 ```
 
-Writes `lodging-opportunities/<slug>/report.md` — platform-presence findings + direct-booking/booking-system
-findings + (if `--url` given) the FULL website-quality report from `packages/opportunities`, reused as-is
-(now industry-aware for hotel/hostel/cabin/bedandbreakfast/vacationrental — see that package's `SHOULD_HAVE`
-map). Shared scan logic lives in `src/scan.mjs` so nothing is duplicated between the two scripts.
+Writes `lodging-opportunities/<slug>/report.md` — direct-booking/booking-system findings (scored) + the FULL
+website-quality report from `packages/opportunities` if `--url` given (scored, reused as-is, now
+industry-aware for hotel/hostel/cabin/bedandbreakfast/vacationrental — see that package's `SHOULD_HAVE` map)
++ platform-presence evidence (unscored, unverified — see caveat above). Shared scan logic lives in
+`src/scan.mjs` so nothing is duplicated between the two scripts.

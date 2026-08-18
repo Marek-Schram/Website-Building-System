@@ -5,15 +5,19 @@
  * Point this at ONE lodging property (name + optional own-site URL) and it produces the same
  * kind of client-ready, severity-tagged "here's what you're losing and how I'd fix it" report
  * that /find-opportunities produces for a regular business website — just for the booking side:
- *   1. PLATFORM PRESENCE — which of the top-5 booking platforms (Airbnb/Vrbo/Booking.com/Expedia/
- *      Hotels.com) the property is missing from. Each missing platform = travelers searching there
- *      who never see this property.
- *   2. DIRECT BOOKING — whether their own site lets a guest book instantly, and whether a real
- *      booking system is behind it (vs. manual phone/email, which risks double-booking).
- *   3. WEBSITE QUALITY — if they have a site, this reuses packages/opportunities' full engine
+ *   1. DIRECT BOOKING — whether their own site lets a guest book instantly, and whether a real
+ *      booking system is behind it (vs. manual phone/email, which risks double-booking). Scored —
+ *      fetched directly from the property's own site, so it's reliable.
+ *   2. WEBSITE QUALITY — if they have a site, this reuses packages/opportunities' full engine
  *      (technical/trust/SEO + industry should-haves for hotel/cabin/vacation-rental/etc.) against
  *      it, so findings like "no HTTPS" or "no reviews shown" come from the exact same checks used
- *      for every other prospect — no separate logic to maintain.
+ *      for every other prospect — no separate logic to maintain. Scored, reliable.
+ *   3. PLATFORM PRESENCE (Airbnb/Vrbo/Booking.com/Expedia/Hotels.com) — checked via a keyless web
+ *      search, shown as UNVERIFIED evidence only, NOT scored and NOT counted toward the opportunity
+ *      score. Verified 2026-08-18 that scraping Bing/DuckDuckGo result pages for this produces mostly
+ *      false negatives (Bing wraps real results in undocumented tracking redirects our scraper can't
+ *      reliably follow) — "not found" means "our search didn't confirm it," never "confirmed absent."
+ *      See memory/lessons-learned.md and packages/testing/unit/booking.mjs's scoreLead comment.
  *
  * Usage:
  *   node packages/lodging-prospects/src/lodging-opportunities.mjs "<Property Name>" [--url <site>] [--city "..."] [--reviews N] [--rating N] [--md|--json] [--slug name]
@@ -47,22 +51,16 @@ const rating = opt('rating') ? parseFloat(opt('rating')) : null;
 const sevIcon = s => s === 'high' ? '🔴' : s === 'medium' ? '🟡' : '⚪';
 
 (async () => {
-  // ---------- 1) PLATFORM PRESENCE ----------
+  // ---------- PLATFORM PRESENCE (unverified evidence, not scored — see file header) ----------
   const presence = [];
   for (const p of PLATFORMS) { presence.push(await checkPresence(name, p, city)); }
-  const missing = presence.filter(p => !p.found);
+  const missing = presence.filter(p => !p.found)
+    .sort((a, b) => (platformSeverity(b.platform) === 'high') - (platformSeverity(a.platform) === 'high')); // high-traffic platforms first, so Marek checks those manually first
 
   const findings = [];
   const add = o => findings.push({ category: 'booking', severity: 'medium', ...o });
 
-  for (const p of missing) {
-    add({ id: 'missing-' + p.platform, severity: platformSeverity(p.platform),
-      finding: `Not listed on ${p.label}.`,
-      impact: `Travelers who search ${p.label} directly never see this property — competitors who ARE listed capture that demand instead.`,
-      fix: `List on ${p.label} (SiteWright listing service — Basic/Standard/Pro tier by platform count).` });
-  }
-
-  // ---------- 2) DIRECT BOOKING / OWN SITE ----------
+  // ---------- DIRECT BOOKING / OWN SITE (reliable — fetched directly) ----------
   const own = url ? await scanOwnSite(url, PLATFORMS) : { site: '', hasBookingLink: false, systems: [], evidence: [] };
   if (!url) {
     add({ id: 'no-website', severity: 'high',
@@ -82,7 +80,7 @@ const sevIcon = s => s === 'high' ? '🔴' : s === 'medium' ? '🟡' : '⚪';
       fix: 'Recommend a channel manager/PMS (Cloudbeds, Lodgify, etc.) synced across every listed platform — see docs/BOOKING-INTEGRATION.md.' });
   }
 
-  // ---------- 3) REVIEWS (cheap trust signal even without a full site scan) ----------
+  // ---------- REVIEWS (cheap trust signal even without a full site scan; reliable — from Places) ----------
   if (reviews > 0 && reviews < 5) {
     add({ id: 'few-reviews', severity: 'low',
       finding: `Only ${reviews} review${reviews === 1 ? '' : 's'} visible.`,
@@ -96,7 +94,7 @@ const sevIcon = s => s === 'high' ? '🔴' : s === 'medium' ? '🟡' : '⚪';
       fix: 'Not a website fix — flag it, but the booking-listing pitch still stands: get onto the platforms guests already trust for reviews.' });
   }
 
-  // ---------- 4) OWN-SITE WEBSITE QUALITY (reuse the full opportunities engine) ----------
+  // ---------- OWN-SITE WEBSITE QUALITY (reuse the full opportunities engine; reliable) ----------
   let siteOpp = null;
   if (url) {
     const r = spawnSync('node', [OPP, url, '--json'], { encoding: 'utf8', timeout: 60000 });
@@ -128,13 +126,18 @@ const sevIcon = s => s === 'high' ? '🔴' : s === 'medium' ? '🟡' : '⚪';
   const md = `# Lodging Opportunity Report — ${name}
 _${city ? `${city} · ` : ''}${url ? `reviewed ${url} · ` : 'no own website found · '}${new Date(report.generatedAt).toLocaleString()}_
 
-**${findings.length} improvement${findings.length === 1 ? '' : 's'} found** (${counts.high} high · ${counts.medium} medium · ${counts.low} low). Opportunity score: **${oppScore}/100**.
-
-Platforms: listed on ${report.platformsPresent.join(', ') || 'none'} · missing from ${report.platformsMissing.join(', ') || 'none — fully listed'}.
+**${findings.length} improvement${findings.length === 1 ? '' : 's'} found** (${counts.high} high · ${counts.medium} medium · ${counts.low} low). Opportunity score: **${oppScore}/100** — based only on direct-booking, booking-system, website-quality, and review signals (all fetched directly, reliable).
 
 ${findings.map((o, i) => `### ${i + 1}. ${sevIcon(o.severity)} ${o.finding}
 - **Why it matters:** ${o.impact}
 - **The fix:** ${o.fix}`).join('\n\n')}
+
+## Platform presence — UNVERIFIED, not scored
+Best-effort keyless web search. Commonly misses real listings (confirmed 2026-08-18 — Bing wraps results in
+undocumented tracking redirects our scraper can't reliably follow). **A property in "no evidence found" may
+still be listed** — confirm manually on each platform before telling a prospect they're not listed.
+- Evidence found on: ${report.platformsPresent.join(', ') || 'none'}
+- No evidence found (check manually, high-traffic platforms first): ${report.platformsMissing.join(', ') || 'none — evidence found on all'}
 
 ---
 _Prepared by SiteWright. Next step: \`/propose-lodging "${name}"\` for a branded, ready-to-send proposal._
@@ -147,6 +150,7 @@ _Prepared by SiteWright. Next step: \`/propose-lodging "${name}"\` for a branded
   console.log(`\n🏨 Lodging Opportunity Report — ${name}`);
   console.log(`   ${findings.length} improvements · ${counts.high} 🔴 high · ${counts.medium} 🟡 medium · ${counts.low} ⚪ low · score ${oppScore}/100\n`);
   findings.forEach((o, i) => { console.log(`  ${i + 1}. ${sevIcon(o.severity)} ${o.finding}`); console.log(`     → why: ${o.impact}`); console.log(`     → fix: ${o.fix}\n`); });
+  console.log(`  Platform presence (UNVERIFIED, not scored): evidence found on ${report.platformsPresent.join(', ') || 'none'} · no evidence for ${report.platformsMissing.join(', ') || 'none'} — verify manually, don't claim "not listed" from this alone.\n`);
   console.log(`  Saved: lodging-opportunities/${slug}/report.md — a client-ready doc you can send.`);
   console.log(`  Tip: pitch the top 🔴 items, then run /propose-lodging "${name}" for a branded proposal.\n`);
 })().catch(e => { console.error('Lodging opportunity scan failed:', e.message || e); process.exit(1); });

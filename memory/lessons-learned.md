@@ -27,3 +27,35 @@
   and `sudo` needs a real interactive terminal (can't be driven through Claude Code's Bash tool or `!`
   passthrough — neither allocates a TTY for the password prompt). Full setup + a `obsidian-vault` launcher
   alias documented in docs/MEMORY.md.
+- 2026-08-18: `find-booking-leads.mjs` was silently never reading `GOOGLE_PLACES_API_KEY` from `.env` at
+  all — it was the one script in the lodging/prospecting family missing `import '../../../env.mjs'` (every
+  sibling script — find-leads.mjs, opportunities.mjs, audit.mjs, deploy.mjs — has it). Looked like ".env
+  gets wiped on commit" from the outside; actually `.env` has zero commit history ever (`git log --all -- .env`
+  is empty — it's gitignored, git literally never touches it). Lesson: when an env var "isn't working" in
+  this repo, check the script imports `env.mjs` before suspecting the `.env` file itself.
+- 2026-08-18: `AbortSignal.timeout(N)` is NOT a reliable bound on a `fetch()` against a host that's
+  network-blackholed (TCP SYN sent, zero response — not an active refusal). Confirmed: a scan hung 36 minutes
+  on ONE stuck connection to a down `html.duckduckgo.com` (only 6s of CPU used the whole time — a real hang,
+  not slowness), because the OS-level `connect()` outlived the abort. Fix in `packages/lodging-prospects/src/scan.mjs`:
+  race the fetch against an explicit `setTimeout`-based rejection (`Promise.race`), which bounds the call
+  regardless of what the underlying socket does. Apply this pattern anywhere a fetch targets a host we don't
+  control and can't guarantee won't blackhole.
+- 2026-08-18: The keyless Bing/DuckDuckGo scraping in `packages/lodging-prospects` for booking-platform
+  presence is fundamentally unreliable, not just occasionally wrong — verified by decoding Bing's actual
+  result links. Bing wraps every real organic result in a `bing.com/ck/a?...&u=<base64url, "a1"-prefixed>`
+  tracking redirect rather than linking directly; a naive regex scrape either matches nothing real (if it
+  excludes `bing.com` URLs, which is where the real links live) or latches onto unrelated domains mentioned
+  elsewhere on the page (CSS asset hosts, a hotel chain's own sidebar links, even Microsoft profile-photo CDN
+  URLs). Confirmed a real case: Hyatt Regency St. Louis at The Arch is definitely on Expedia (independently
+  verified), scraper said "0/5 platforms." Worse: after correctly decoding the `ck/a` redirects, two
+  differently-worded queries about the same property returned IDENTICAL decoded links — a fixed "Hyatt" brand
+  knowledge-panel, not per-query organic results — meaning even proper redirect-decoding doesn't reliably
+  reach real results; Bing's actual SERP structure would need much deeper reverse-engineering, with no
+  guarantee it stays fixed. Decision (with Marek, 2026-08-18): don't keep chasing the scrape — de-emphasize
+  platform-presence entirely. `scoreLead()` in `packages/testing/unit/booking.mjs` no longer takes presence
+  as an input at all (rescored from only: no-website, no-direct-booking, no-booking-system, reviews/rating —
+  all fetched directly and reliable). Presence checks are still run and shown, but explicitly labeled
+  "UNVERIFIED — not scored" in every output (console, JSON, markdown, lodging-opportunities.mjs reports).
+  If accurate platform-presence is ever needed again, the real fix is a proper search API (Bing Web Search
+  API / Google Custom Search JSON API), not more scraping — see the "Switch to a real search API" option
+  that was declined this session in favor of staying keyless.
