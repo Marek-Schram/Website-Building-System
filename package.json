@@ -23,6 +23,7 @@
     "deadcode": "knip",
     "brief": "node packages/prospect-brief/src/brief.mjs",
     "booking-leads": "node packages/lodging-prospects/src/find-booking-leads.mjs",
+    "booking-opportunities": "node packages/lodging-prospects/src/lodging-opportunities.mjs",
     "propose": "node packages/proposals/src/proposal.mjs",
     "listing-kit": "node packages/listing-kit/src/kit.mjs",
     "invoice": "node packages/invoicing/src/invoice.mjs",

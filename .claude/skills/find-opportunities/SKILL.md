@@ -29,7 +29,7 @@ Each item has severity (🔴 high / 🟡 medium / ⚪ low), a plain-English busi
    DoorDash you could keep"). Attach `report.md`.
 3. Pair with `/demo-site` + `/add-feature` to SHOW the fix, and `/match-site` if replacing their site
    (parity + opportunities together = "I keep everything good, fix everything weak, for less").
-4. Log notable scans in `memory/leads/<city>-<niche>.md`.
+4. Log every scan (not just notable ones) in `memory/leads/<niche>-<city>.md` — memory-log convention.
 
 ## Notes
 - A strong site correctly returns few/zero opportunities — keep it credible, don't over-alarm.

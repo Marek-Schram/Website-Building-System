@@ -15,3 +15,15 @@
   Added e2e specs: chatbot.spec.mjs (widget interactions) + chatbot-ai.spec.mjs (AI call + auto-fallback).
   E2E mobile project now runs on Chromium (iPhone viewport) so tests run without WebKit system deps.
   demos/smoke regenerated with contact info so the CI human-test gate passes on every demo.
+- 2026-08-18: Added `/find-booking-opportunities` (packages/lodging-prospects/src/lodging-opportunities.mjs) —
+  the lodging analog of `/find-opportunities`, closing the gap where booking clients had find-leads
+  (`/find-booking-leads`) but no per-property deep-dive report. Produces a severity-tagged, client-ready
+  `lodging-opportunities/<slug>/report.md` covering platform-presence gaps (Airbnb/Vrbo/Booking.com/Expedia/
+  Hotels.com), direct-booking + booking-system detection, and — reusing `packages/opportunities` as-is — the
+  full website-quality report against the property's own site. Extended `opportunities.mjs`'s industry map
+  with hotel/hostel/cabin/bedandbreakfast/vacationrental so `/find-opportunities` and `/prospect-brief` also
+  classify lodging sites correctly on their own, not just through the new tool. Extracted shared network-scan
+  helpers (`checkPresence`, `scanOwnSite`, `searchWeb`) from `find-booking-leads.mjs` into a new
+  `packages/lodging-prospects/src/scan.mjs` so both scripts share one implementation. Full funnel is now
+  `/find-booking-leads` → `/find-booking-opportunities` → `/propose-lodging` → `/listing-kit`, mirroring the
+  website funnel's `/find-leads` → `/find-opportunities` → `/demo-site`/`/prospect-brief` → `/new-client`.

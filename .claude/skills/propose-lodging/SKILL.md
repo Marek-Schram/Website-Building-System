@@ -29,3 +29,4 @@ node packages/proposals/src/proposal.mjs "<Property Name>" \
 2. `/propose-lodging "<name>" --city "…" --contact "…" --platforms airbnb,vrbo --booking-system "<detected>"`.
 3. Email the PDF with the outreach-email.txt text.
 4. On "I accept" → `/listing-kit` for the onboarding packet. See docs/PROPOSALS.md, docs/BOOKING-INTEGRATION.md.
+Log the proposal (tier, platforms, sent date) to `memory/leads/lodging-<city>.md` — memory-log convention.

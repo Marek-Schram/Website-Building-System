@@ -27,3 +27,7 @@ export function scoreLead(presence,own,reviews,rating,website){
 
 const PLATFORM_LABEL={airbnb:'Airbnb',vrbo:'Vrbo','booking.com':'Booking.com',expedia:'Expedia','hotels.com':'Hotels.com'};
 export function platformLabels(raw){return String(raw||'airbnb,vrbo').split(',').map(s=>s.trim()).filter(Boolean).map(p=>PLATFORM_LABEL[p]||p);}
+
+// How much traffic being missing from a given platform costs — used to severity-tag opportunity findings.
+const HIGH_TRAFFIC_PLATFORMS=new Set(['airbnb','vrbo','booking.com']);
+export function platformSeverity(platformId){return HIGH_TRAFFIC_PLATFORMS.has(platformId)?'high':'medium';}

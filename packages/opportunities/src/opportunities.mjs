@@ -88,6 +88,11 @@ const SHOULD_HAVE = {
   cleaning: [['booking', 'Instant quote/booking wins the job.'], ['reviews', 'Trust for home access.'], ['contact-form', 'Quote requests.']],
   autorepair: [['booking', 'Appointment requests online.'], ['reviews', 'Trust for fair pricing.'], ['map', 'Find the shop.'], ['click-to-call', 'Quick calls.']],
   retail: [['store', 'Sell online, not just in person.'], ['payments', 'Take payment on the site.'], ['gallery', 'Product photos.'], ['newsletter', 'Repeat sales.']],
+  hotel: [['booking', 'A direct "Book Now" on your own site avoids the 15–25% commission Airbnb/Booking.com/Expedia take on every OTA booking.'], ['gallery', 'Room and property photos are the #1 driver of a booking decision.'], ['reviews', 'Travelers check reviews before booking a stay — none visible costs bookings.'], ['map', 'One-tap directions help guests actually arrive.']],
+  hostel: [['booking', 'Direct bookings skip the OTA commission most hostels rely on Hostelworld/Booking.com for.'], ['reviews', 'Younger travelers lean heavily on reviews before booking a bed.'], ['gallery', 'Photos of the common areas and rooms sell the stay.'], ['social', 'Hostel guests check social before booking.']],
+  cabin: [['booking', 'A direct "Book Now" avoids OTA commission on Airbnb/Vrbo.'], ['gallery', 'Photos of the cabin, view, and amenities sell the stay.'], ['reviews', 'Trust before booking a remote property.'], ['map', 'Guests need clear directions to find rural properties.']],
+  bedandbreakfast: [['booking', 'Direct bookings avoid OTA commission and let you manage the relationship.'], ['gallery', 'Room and breakfast photos are the top decision driver.'], ['reviews', 'Trust matters for a personal, small-scale stay.'], ['contact-form', 'Guests often ask about pets, diet, or arrival time before booking.']],
+  vacationrental: [['booking', 'A direct "Book Now" avoids the 15–25% commission Airbnb/Vrbo take on every booking.'], ['gallery', 'Photos of the property, view, and amenities sell the stay.'], ['reviews', 'Travelers check reviews before booking a rental.'], ['map', 'Guests need directions to find the property.']],
   default: [['contact-form', 'A way to capture leads 24/7.'], ['map', 'One-tap directions.'], ['reviews', 'Social proof to win trust.'], ['click-to-call', 'Easy phone contact.'], ['social', 'Where customers check you out.']],
 };
 
@@ -107,6 +112,11 @@ function guessIndustry(html, override) {
   if (has('law firm', 'attorney', 'lawyer', 'legal')) return 'lawyer';
   if (has('cleaning', 'maid', 'janitorial')) return 'cleaning';
   if (has('auto repair', 'mechanic', 'oil change', 'tires')) return 'autorepair';
+  if (has('hostel', 'dorm bed', 'shared room')) return 'hostel';
+  if (has('bed and breakfast', 'bed & breakfast', 'b&b')) return 'bedandbreakfast';
+  if (has('cabin rental', 'cabin', 'chalet')) return 'cabin';
+  if (has('vacation rental', 'short-term rental', 'vrbo')) return 'vacationrental';
+  if (has('hotel', 'inn', 'lodge', 'resort', 'nightly rate', 'per night', 'check-in', 'check-out')) return 'hotel';
   if (has('shop', 'store', 'boutique', 'buy now', 'cart')) return 'retail';
   return 'default';
 }

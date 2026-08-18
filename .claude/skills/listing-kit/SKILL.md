@@ -31,3 +31,4 @@ node packages/listing-kit/src/kit.mjs "<Property Name>" \
 2. Send request-email.txt + checklist, collect answers, fill listing-copy, create listings.
 3. Work the setup-guide steps, mark tracking.md, verify each platform is live → then invoice.
 See docs/LISTING-KIT.md and docs/BOOKING-INTEGRATION.md (the decision tree for the calendar wiring).
+Log the won property + live platforms to `memory/clients/<slug>.md` — memory-log convention.

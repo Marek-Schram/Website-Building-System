@@ -10,3 +10,4 @@ section instead), applies brand.config's `addons` via packages/addons, and write
 _headers + robots.txt + sitemap.xml + public/ assets). It refuses to build while any field still says
 "REPLACE" (`--force` overrides, printing a loud warning) and flags dangling `#anchor` links before they ship.
 Preview dist/<slug>/index.html locally; visual-qa. Then /test-site + /security-gate before live.
+Log the build (theme, add-ons enabled, date) to `memory/clients/<slug>.md` — memory-log convention.

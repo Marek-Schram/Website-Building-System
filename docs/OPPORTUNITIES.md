@@ -22,6 +22,8 @@ node packages/opportunities/src/opportunities.mjs <url-or-html> [--industry <typ
    - Salon / barber / dentist / gym / cleaning / lawyer / auto → **booking** (~40% of bookings are after-hours;
      reminders cut no-shows 30–50%).
    - Plumber / electrician → click-to-call, contact form, reviews, FAQ.
+   - Hotel / hostel / cabin / bed-and-breakfast / vacation-rental → **booking** (a direct "Book Now" avoids
+     the 15–25% OTA commission), gallery, reviews.
 2. **Technical** — no HTTPS, no mobile viewport, slow PageSpeed, missing security headers, exposed server
    version, **PDF menu**, images without alt text.
 3. **Trust / SEO** — no title / meta description, no contact method, no reviews, stale copyright year, no favicon.
@@ -53,3 +55,7 @@ read-only analysis, not a security scan of someone else's property.
 `/find-leads` → **`/find-opportunities`** (what's weak) → `/demo-site` + `/add-feature` (show the fix) →
 outreach the top weak points → win → `/new-client` … (or `/match-site` to replace their site). See
 `docs/CLIENT-ENGINE.md`.
+
+**Lodging/booking clients** get the same two-step pattern via a different pair: `/find-booking-leads` →
+`/find-booking-opportunities` — the latter reuses this exact engine for website-quality findings and adds
+booking-platform-presence + direct-booking findings on top. See `docs/BOOKING-INTEGRATION.md`.

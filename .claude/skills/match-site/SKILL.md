@@ -24,3 +24,4 @@ Reports ✅ preserved / ❌ MISSING (regression) / ✨ added + style/contact/pag
 Loop with qa-debugger until zero regressions, then `/test-site` + `/security-gate`.
 
 Pair with `/find-opportunities` (fix the weak points too). Boundary: only capture sites the business owns/authorizes; public HTML/CSS only.
+Log the parity result (preserved/regression/added) to `memory/clients/<slug>.md` — memory-log convention.

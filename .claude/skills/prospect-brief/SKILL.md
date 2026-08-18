@@ -28,3 +28,4 @@ Runs three tools and assembles a branded, print-ready document you can email or 
 Pull a lead with `/find-leads`, run `/prospect-brief <their-url> --name "…" --type restaurant --city "…"`,
 then email `prospect-brief.html` (as PDF) with the `outreach-email.txt` text. It's the whole pitch in one file:
 "here's what's weak, here's your score, here's a site I already built — for less." Boundary: public sites only.
+Log that the brief was sent to `memory/leads/<niche>-<city>.md` — memory-log convention.

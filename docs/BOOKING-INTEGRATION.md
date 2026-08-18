@@ -93,5 +93,7 @@ For every property where we add a booking button:
 - **Standard ($90):** two platforms + calendar sync (Route 2 iCal or Route 1 widget if a system exists).
 - **Pro ($150):** three platforms + verified sync + setup guide + tracking sheet (listing-kit) + support.
 
-The deliverables that make this real: `packages/lodging-prospects` (find who's missing), `packages/proposals`
-(win the deal), `packages/listing-kit` (onboard + track). Docs: `docs/PROPOSALS.md`, `docs/LISTING-KIT.md`.
+The deliverables that make this real: `packages/lodging-prospects` (find who's missing — `find-booking-leads.mjs`
+for the batch scan, `lodging-opportunities.mjs` for a polished per-property report, see
+`.claude/skills/find-booking-opportunities/SKILL.md`), `packages/proposals` (win the deal), `packages/listing-kit`
+(onboard + track). Docs: `docs/PROPOSALS.md`, `docs/LISTING-KIT.md`.

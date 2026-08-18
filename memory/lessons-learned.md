@@ -17,3 +17,13 @@
 - 2026-08-15: OpenRouter model IDs changed — old `-free` suffixed slugs (e.g. nvidia/nemotron-3-super-free) no
   longer exist; current free IDs use `:free` variants (e.g. nvidia/nemotron-3-super-120b-a12b:free,
   cohere/north-mini-code:free). Verified against /api/v1/models on 2026-08-15.
+- 2026-08-17: Windows-side Obsidian opening the vault over `\\wsl.localhost\<distro>\...` stayed broken even
+  after updating WSL — it's a cross-boundary Electron/UNC-path issue, not a WSL version bug, so updating WSL
+  never fixes it. Root cause fix: run the Linux Obsidian AppImage natively *inside* WSL instead (WSLg forwards
+  the window to the Windows desktop) — reads the vault off the native filesystem, no network path involved.
+  AppImages need FUSE which wasn't installed (needs sudo); worked around by extracting once
+  (`--appimage-extract`) and running the extracted `AppRun` directly, no FUSE/root needed after that. Electron
+  also needed `libnspr4 libnss3 libasound2t64` (missing on a minimal WSL install) — that part DOES need sudo,
+  and `sudo` needs a real interactive terminal (can't be driven through Claude Code's Bash tool or `!`
+  passthrough — neither allocates a TTY for the password prompt). Full setup + a `obsidian-vault` launcher
+  alias documented in docs/MEMORY.md.

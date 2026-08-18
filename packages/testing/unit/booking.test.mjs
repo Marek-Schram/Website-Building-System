@@ -1,5 +1,5 @@
 import {describe,it,expect} from 'vitest';
-import {slugify,domMatch,presenceHit,detectSystems,hasBookingLink,scoreLead,platformLabels} from './booking.mjs';
+import {slugify,domMatch,presenceHit,detectSystems,hasBookingLink,scoreLead,platformLabels,platformSeverity} from './booking.mjs';
 
 describe('slugify',()=>it('kebab',()=>{expect(slugify("Dollywood DreamMore Resort")).toBe('dollywood-dreammore-resort');}));
 
@@ -31,3 +31,8 @@ describe('scoreLead',()=>{
 });
 
 describe('platformLabels',()=>it('maps',()=>{expect(platformLabels('airbnb,vrbo')).toEqual(['Airbnb','Vrbo']);}));
+
+describe('platformSeverity',()=>{
+  it('high-traffic platforms are high severity',()=>{expect(platformSeverity('airbnb')).toBe('high');expect(platformSeverity('vrbo')).toBe('high');expect(platformSeverity('booking.com')).toBe('high');});
+  it('smaller platforms are medium severity',()=>{expect(platformSeverity('expedia')).toBe('medium');expect(platformSeverity('hotels.com')).toBe('medium');});
+});

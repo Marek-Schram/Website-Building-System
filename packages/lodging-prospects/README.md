@@ -40,3 +40,18 @@ node packages/lodging-prospects/src/find-booking-leads.mjs --url "https://www.tr
 Presence checks are best-effort keyless signals — **verify evidence before outreach** (each hit includes the
 URL it came from). Own-site scans are the reliable signal: they tell you exactly what booking system each
 property already runs, which the proposal then references ("works with your current setup").
+
+## Going deeper on one property: lodging-opportunities.mjs
+
+`find-booking-leads.mjs` finds and scores many properties at once. Once you've picked one, run
+`lodging-opportunities.mjs` (the lodging analog of `packages/opportunities`) to turn it into a client-ready,
+severity-tagged report — see `.claude/skills/find-booking-opportunities/SKILL.md`.
+
+```
+node packages/lodging-prospects/src/lodging-opportunities.mjs "The Treehouse Cabin" --url "https://www.treehousecabin.com" --city "Gold Hill" --reviews 4 --rating 4.8
+```
+
+Writes `lodging-opportunities/<slug>/report.md` — platform-presence findings + direct-booking/booking-system
+findings + (if `--url` given) the FULL website-quality report from `packages/opportunities`, reused as-is
+(now industry-aware for hotel/hostel/cabin/bedandbreakfast/vacationrental — see that package's `SHOULD_HAVE`
+map). Shared scan logic lives in `src/scan.mjs` so nothing is duplicated between the two scripts.

@@ -42,7 +42,7 @@ packages/prospect-brief/ ← one emailable doc: opportunities+audit+demo → /pr
 packages/security/    packages/audit/ → /audit-site   packages/prospecting/ → /find-leads
 packages/invoicing/   ← branded invoice.html for a won deal (from Command Center) → `npm run invoice`
 packages/demo-gen/ → /demo-site   packages/testing/ → /test-site, /blind-review
-packages/lodging-prospects/ → /find-booking-leads   packages/proposals/ → /propose-lodging   packages/listing-kit/ → /listing-kit
+packages/lodging-prospects/ → /find-booking-leads + /find-booking-opportunities   packages/proposals/ → /propose-lodging   packages/listing-kit/ → /listing-kit
 command-center/ ← local GUI: one pipeline board driving every skill above → `npm run command-center`
 clients/  demos/  parity/  opportunities/  memory/  marketing-toolkit/  scripts/  docs/
 ```
@@ -75,16 +75,19 @@ fix) → `/audit-site` → outreach the top weak points.
 
 ### D) Booking line of business (lodging, docs/BOOKING-INTEGRATION.md)
 `/find-booking-leads "<city>"` (who's missing from Airbnb/Vrbo/Booking.com/Expedia/Hotels.com + their current
-booking system) → `/propose-lodging` (branded proposal, one theme file) → `/listing-kit` (onboard + track →
-verified live → invoice). Add-on: `booking-link` ("Book on <platform>" button + optional iCal sync).
+booking system) → `/find-booking-opportunities "<name>"` (deep dive on ONE property — platform gaps, direct-
+booking, booking system, + full website-quality report; the lodging analog of `/find-opportunities`) →
+`/propose-lodging` (branded proposal, one theme file) → `/listing-kit` (onboard + track → verified live →
+invoice). Add-on: `booking-link` ("Book on <platform>" button + optional iCal sync).
 Free checklist: Basic $50/1 platform, Standard $90/2, Pro $150/3 — no deposit, pay when live.
 
 ### Debugging & cleanup (hand off)
 `/test-site` → `qa-debugger`. `/blind-review` → `blind-reviewer` (context-free dead-code cleanup).
 
 ## Memory
-`memory/` = local Obsidian-compatible markdown. Read `clients/<slug>.md` + `conventions.md` at start; write as
-you go. Keys: conventions, decisions-log, lessons-learned, clients/, leads/, snippets/. See docs/MEMORY.md.
+`memory/` IS an Obsidian vault (open it in the Obsidian app; optional live MCP connection). Read
+`clients/<slug>.md` + `conventions.md` at start; every skill writes here as a normal last step, not on
+request. Keys: conventions, decisions-log, lessons-learned, clients/, leads/, snippets/. See docs/MEMORY.md.
 
 ## First time here?
 Read `SETUP.md` (one-time setup vs. repeatable loops). Then `/find-leads`, `/find-opportunities`, `/demo-site`,

@@ -7,6 +7,8 @@ dist/
 .DS_Store
 .wrangler/
 memory/.flush-log.md
+memory/.obsidian/workspace*.json
+memory/.obsidian/plugins/obsidian-local-rest-api/data.json
 clients/**/assets/*.psd
 *.sarif
 *.jsonl
@@ -20,6 +22,7 @@ prospect-briefs/
 opportunities/*/
 !opportunities/example-domain/
 lodging-prospects/out/
+lodging-opportunities/*/
 proposals/out/
 listing-kit/out/
 invoices/out/
