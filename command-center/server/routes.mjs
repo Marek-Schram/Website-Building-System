@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { readFileSync, writeFileSync, existsSync, cpSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, cpSync, readdirSync, statSync, rmSync } from 'node:fs';
 import { resolve, relative, join } from 'node:path';
 import {
   listDeals, getDeal, createDeal, updateDeal, deleteDeal, listActivity, logActivity, listFollowUps,
@@ -237,8 +237,16 @@ router.post('/deals/:id/generate-demo', (req, res) => {
   const deal = getDeal(req.params.id);
   if (!deal) return res.status(404).json({ error: 'Deal not found.' });
   const slug = dealSlug(deal);
+  // A high-quality /demo-site (Full mode) may already exist at this same demos/<slug>/ path — its
+  // demos/<slug>/_source/ directory is the marker. Quick mode would silently overwrite it, so this
+  // requires an explicit confirm (force:true) rather than clobbering real authored work unasked.
+  const hasFullDemo = existsSync(resolve(ROOT, 'demos', slug, '_source'));
+  if (hasFullDemo && !req.body?.force) {
+    return res.status(409).json({ needsConfirm: true, message: 'A high-quality demo already exists for this deal — generating a quick demo will replace it.' });
+  }
   const args = ['--name', deal.name, '--slug', slug];
   if (deal.industry) args.push('--type', deal.industry);
+  if (deal.website) args.push('--url', deal.website);
   if (deal.city) args.push('--city', deal.city);
   if (deal.phone) args.push('--phone', deal.phone);
   if (deal.email) args.push('--email', deal.email);
@@ -248,11 +256,39 @@ router.post('/deals/:id/generate-demo', (req, res) => {
   waitForJob(job).then(j => {
     const path = resolve(ROOT, 'demos', slug, 'index.html');
     if (existsSync(path)) {
-      updateDeal(deal.id, { demo_path: `demos/${slug}/index.html` });
-      logActivity(deal.id, 'tool_run', 'Demo site ready');
+      // Clean up the stale _source/ marker so a later "Check for full demo" can't false-positive on a
+      // full demo that's actually just been overwritten by this quick one.
+      if (hasFullDemo) rmSync(resolve(ROOT, 'demos', slug, '_source'), { recursive: true, force: true });
+      updateDeal(deal.id, { demo_path: `demos/${slug}/index.html`, demo_quality: 'quick' });
+      logActivity(deal.id, 'tool_run', hasFullDemo ? 'Quick demo regenerated — overwrote the earlier high-quality demo at the same path.' : 'Demo site ready');
     } else logActivity(deal.id, 'tool_run', 'Demo generation finished but no file was found.');
   });
   res.status(202).json({ jobId: job.id });
+});
+
+// ---------- full demo (Claude-authored /demo-site Full mode — same flag+detect pattern as marketing-kit
+// above: the board can't run an interactive Claude Code skill, only flag it for the human to run in chat
+// and detect the result once it exists) ----------
+
+router.post('/deals/:id/full-demo/flag', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  const slug = dealSlug(deal);
+  updateDeal(deal.id, { needs_full_demo: 1 });
+  logActivity(deal.id, 'note', `Flagged for /demo-site ${slug} (Full mode) — run it in Claude Code chat.`);
+  res.json({ ok: true, slug });
+});
+
+router.post('/deals/:id/full-demo/check', (req, res) => {
+  const deal = getDeal(req.params.id);
+  if (!deal) return res.status(404).json({ error: 'Deal not found.' });
+  const slug = dealSlug(deal);
+  const indexPath = resolve(ROOT, 'demos', slug, 'index.html');
+  const sourceDir = resolve(ROOT, 'demos', slug, '_source');
+  if (!existsSync(indexPath) || !existsSync(sourceDir)) return res.json({ found: false });
+  updateDeal(deal.id, { demo_path: `demos/${slug}/index.html`, demo_quality: 'full', needs_full_demo: 0 });
+  logActivity(deal.id, 'tool_run', 'High-quality demo found — /demo-site Full mode completed.');
+  res.json({ found: true });
 });
 
 router.post('/deals/:id/generate-brief', (req, res) => {

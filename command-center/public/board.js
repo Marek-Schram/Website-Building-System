@@ -139,6 +139,7 @@ function renderCard(deal, onOpenDeal) {
       ${deal.follow_up_date ? `<div class="followup" style="${overdue ? 'color:var(--crit)' : ''}">${overdue ? '⚠ overdue: ' : 'follow up '}${fmtDate(deal.follow_up_date)}</div>` : ''}
       <div class="flags">
         ${deal.needs_security_gate ? '<span class="chip flag">security gate</span>' : ''}
+        ${deal.needs_full_demo ? '<span class="chip flag">full demo</span>' : ''}
         ${deal.live_url ? '<span class="chip plain">live</span>' : ''}
       </div>
     </button>

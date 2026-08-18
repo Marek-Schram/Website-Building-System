@@ -27,3 +27,23 @@
   `packages/lodging-prospects/src/scan.mjs` so both scripts share one implementation. Full funnel is now
   `/find-booking-leads` → `/find-booking-opportunities` → `/propose-lodging` → `/listing-kit`, mirroring the
   website funnel's `/find-leads` → `/find-opportunities` → `/demo-site`/`/prospect-brief` → `/new-client`.
+- 2026-08-18: Demo-generation overhaul (full plan: `.claude/plans/also-right-now-i-smooth-kazoo.md`).
+  `/demo-site`'s old implementation (`packages/demo-gen`) was a single hardcoded 8-bucket/4-palette
+  template that never fetched anything real from a prospect's actual site — Marek's assessment: "looks way
+  too AI generated," "doesn't match the old website at all." Rebuilt as two tiers, both writing to the same
+  `demos/<slug>/index.html`: **Quick** (batch, unattended, upgraded demo-gen with real captured colors/
+  services when a URL is available) and **Full** (interactive — Claude screenshots the real site via a new
+  real-browser capture, writes paraphrased copy, picks one feature, renders through `packages/site-builder`
+  — the same real-content pipeline paying clients get, via a new `clientDir` override on `buildSite()`).
+  New shared `packages/opportunities/src/classify.mjs` (industry classification + feature detection,
+  previously duplicated 3x) adds roofing/HVAC/landscaping/painters. New `packages/parity/src/
+  capture-browser.mjs` + `extract-dom.mjs` (real headless-browser capture, fixes proven data corruption a
+  plain fetch has on JS-heavy sites — see lessons-learned). `packages/site-builder` gained real theme-level
+  visual variety (photo heroes, real Google Fonts, 3 genuinely distinct layouts) — previously all 3 themes
+  rendered identically. `scripts/new-client.mjs` now seeds from a completed Full demo's `_source/` when one
+  exists. Command Center got a matching "Flag for /demo-site (full)" / "Check for full demo" pair (same
+  flag+detect pattern as `/marketing-kit`), plus a confirm-before-overwrite guard since Quick and Full write
+  to the same path. Deleted `packages/components/src/Hero.astro` (confirmed dead code, zero references, no
+  Astro toolchain anywhere in this repo) after evaluating and rejecting introducing a real Astro toolchain —
+  disproportionate to the problem and against this repo's explicit zero-build-step architecture.
+  133 tests (vitest + Playwright), many new, all passing; validated end-to-end against a real business site.

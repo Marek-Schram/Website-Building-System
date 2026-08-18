@@ -1,1 +1,12 @@
-{ "name":"summit","description":"Bold & modern","defaultSections":["Hero","Services","About","Testimonials","Hours","ContactForm","Footer"] }
+{
+  "name": "summit",
+  "description": "Bold & modern",
+  "defaultSections": ["Hero", "Services", "About", "Testimonials", "Hours", "ContactForm", "Footer"],
+  "layout": "split-hero",
+  "cardStyle": "icon-circle",
+  "fonts": {
+    "heading": "Poppins",
+    "body": "Inter",
+    "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;600&display=swap"
+  }
+}

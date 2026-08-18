@@ -41,7 +41,9 @@ packages/opportunities/ ← detect weak points on a prospect's site → /find-op
 packages/prospect-brief/ ← one emailable doc: opportunities+audit+demo → /prospect-brief
 packages/security/    packages/audit/ → /audit-site   packages/prospecting/ → /find-leads
 packages/invoicing/   ← branded invoice.html for a won deal (from Command Center) → `npm run invoice`
-packages/demo-gen/ → /demo-site   packages/testing/ → /test-site, /blind-review
+packages/demo-gen/ → /demo-site (Quick, batch) — /demo-site's Full (interactive) mode also uses
+  packages/parity/capture-browser.mjs (real screenshot) + packages/site-builder (real render)
+packages/testing/ → /test-site, /blind-review
 packages/lodging-prospects/ → /find-booking-leads + /find-booking-opportunities   packages/proposals/ → /propose-lodging   packages/listing-kit/ → /listing-kit
 command-center/ ← local GUI: one pipeline board driving every skill above → `npm run command-center`
 clients/  demos/  parity/  opportunities/  memory/  marketing-toolkit/  scripts/  docs/

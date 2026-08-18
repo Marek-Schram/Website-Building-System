@@ -98,19 +98,42 @@ function validate(cfg, content) {
 
 // ---------- section renderers (skip gracefully — never fabricate content) ----------
 
-function renderHero(cfg, content) {
+// Layout variants (image-hero/split-hero) render a real photo — never a stock/placeholder image. If the
+// theme calls for one but no real photo was supplied (cfg.brand.heroImage or home.md's hero_image:
+// frontmatter), this gracefully falls back to the plain text-hero look instead of fabricating an image.
+function renderHero(cfg, content, theme) {
   const home = content.home;
   if (!home) return '';
   const d = home.data;
-  return `\n<section class="hero"><div class="wrap"><h1>${esc(d.hero_heading || cfg.businessName)}</h1><p class="tag">${esc(d.hero_sub || cfg.tagline || '')}</p>${mdParagraphs(home.body)}<div class="cta-row">${cfg.contact?.phone ? `<a class="btn primary" href="tel:${esc(String(cfg.contact.phone).replace(/[^0-9+]/g, ''))}">📞 ${esc(cfg.contact.phone)}</a>` : ''}${d.cta_label ? `<a class="btn" href="${esc(d.cta_href || '#contact')}">${esc(d.cta_label)}</a>` : ''}</div></div></section>`;
+  const heroImg = d.hero_image || cfg.brand?.heroImage;
+  const layout = heroImg ? (theme?.layout || 'text-hero') : 'text-hero';
+  const heading = `<h1>${esc(d.hero_heading || cfg.businessName)}</h1>`;
+  const tag = `<p class="tag">${esc(d.hero_sub || cfg.tagline || '')}</p>`;
+  const body = mdParagraphs(home.body);
+  const cta = `<div class="cta-row">${cfg.contact?.phone ? `<a class="btn primary" href="tel:${esc(String(cfg.contact.phone).replace(/[^0-9+]/g, ''))}">📞 ${esc(cfg.contact.phone)}</a>` : ''}${d.cta_label ? `<a class="btn" href="${esc(d.cta_href || '#contact')}">${esc(d.cta_label)}</a>` : ''}</div>`;
+
+  if (layout === 'image-hero') {
+    return `\n<section class="hero image-hero" style="background-image:linear-gradient(180deg,rgba(15,23,42,.15),rgba(15,23,42,.55)),url('${esc(heroImg)}')"><div class="wrap">${heading}${tag}${body}${cta}</div></section>`;
+  }
+  if (layout === 'split-hero') {
+    return `\n<section class="hero split-hero"><div class="wrap split"><div class="hero-text">${heading}${tag}${body}${cta}</div><div class="hero-img" style="background-image:url('${esc(heroImg)}')" role="img" aria-label="${esc(cfg.businessName)}"></div></div></section>`;
+  }
+  return `\n<section class="hero"><div class="wrap">${heading}${tag}${body}${cta}</div></section>`;
 }
 
-function renderServices(cfg, content) {
+// cardStyle 'photo' (theme-driven) shows each service's own image when the content file supplies one
+// (parseList already captures arbitrary "image: ..." lines generically, no parser change needed) — falls
+// back to the icon-circle look per-item when a given service has no image, never a stock placeholder photo.
+function renderServices(cfg, content, theme) {
   const svc = content.services;
   if (!svc) return '';
   const items = parseList(svc.body);
   if (!items.length) return '';
-  const cards = items.map((s, i) => `<article class="card"><div class="ic">${['①', '②', '③', '④', '⑤', '⑥'][i] || '•'}</div><h3>${esc(s.name || '')}</h3><p>${esc(s.description || '')}</p>${s.price ? `<p class="price">${esc(s.price)}</p>` : ''}</article>`).join('');
+  const photoStyle = theme?.cardStyle === 'photo';
+  const cards = items.map((s, i) => {
+    const media = photoStyle && s.image ? `<img class="card-img" loading="lazy" src="${esc(s.image)}" alt="${esc(s.name || '')}">` : `<div class="ic">${['①', '②', '③', '④', '⑤', '⑥'][i] || '•'}</div>`;
+    return `<article class="card">${media}<h3>${esc(s.name || '')}</h3><p>${esc(s.description || '')}</p>${s.price ? `<p class="price">${esc(s.price)}</p>` : ''}</article>`;
+  }).join('');
   return `\n<section id="services"><div class="wrap"><h2>${esc(svc.data.title || 'What We Offer')}</h2><div class="grid">${cards}</div></div></section>`;
 }
 
@@ -180,17 +203,25 @@ const SECTION_RENDERERS = {
 
 // ---------- page shell (shared CSS vars/classes with packages/addons so injected add-ons match) ----------
 
-function shell({ cfg, sectionsHtml, headExtra }) {
+function shell({ cfg, sectionsHtml, headExtra, theme }) {
   const c = cfg.brand?.colors || {};
   const primary = c.primary || '#1d4ed8', accent = c.accent || '#0369a1', ink = c.secondary || '#0f172a';
   const name = esc(cfg.businessName), tag = esc(cfg.tagline || '');
   const desc = `${name} — ${cfg.tagline || ''}`.trim();
+  // Font: cfg.brand.font (captured from the client's/prospect's real site, when known) wins; falls back to
+  // the theme's own font pairing; both ultimately fall back to system-ui if neither is set. Previously
+  // brand.font was captured but never actually used anywhere in the output — this is the fix for that.
+  const fHeading = cfg.brand?.font?.heading || theme?.fonts?.heading || null;
+  const fBody = cfg.brand?.font?.body || theme?.fonts?.body || null;
+  const googleFontsUrl = cfg.brand?.font?.googleFontsUrl || theme?.fonts?.googleFontsUrl || null;
+  const fontLink = googleFontsUrl ? `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="${esc(googleFontsUrl)}" rel="stylesheet">` : '';
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="${esc(desc)}"><title>${name} — ${tag}</title>
 <link rel="icon" href="data:,">
+${fontLink}
 ${headExtra || ''}
-<style>:root{--primary:${primary};--accent:${accent};--ink:${ink};--bg:#ffffff}*{box-sizing:border-box}body{margin:0;font:16px/1.6 system-ui,sans-serif;color:var(--ink);background:var(--bg)}a{color:var(--primary)}.wrap{max-width:1040px;margin:0 auto;padding:0 20px}.narrow{max-width:720px}header{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid #0000000f;z-index:10}.nav{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;max-width:1040px;margin:0 auto}.brand{font-weight:800;color:var(--primary);text-decoration:none}.nav a.link{margin-left:18px;text-decoration:none;color:var(--ink);font-weight:600}.btn{display:inline-block;background:var(--accent);color:#fff;padding:.8rem 1.4rem;border-radius:.6rem;text-decoration:none;font-weight:700;border:0;cursor:pointer;font:inherit}.btn.primary{background:var(--primary)}.hero{padding:5.5rem 0 4rem;text-align:center}.hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:.4rem 0;color:var(--primary)}.hero .tag{font-size:1.2rem;opacity:.85;margin-bottom:1rem}.cta-row{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}section{padding:3.2rem 0}section.alt{background:#f8fafc}.cta-band{text-align:center;background:#f1f5f9}h2{font-size:1.8rem;color:var(--primary);text-align:center;margin-bottom:1.4rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}.card{background:#fff;border:1px solid #0000000d;border-radius:.9rem;padding:1.4rem;margin:0}.ic{width:40px;height:40px;border-radius:.6rem;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:.6rem}.price{font-weight:700;color:var(--accent)}.prose{max-width:720px;margin:0 auto}.prose p{margin:.6rem 0}.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1.2rem 0}.box{background:#fff;border:1px solid #0000000d;border-radius:.8rem;padding:1.1rem;text-align:center}.box b{display:block;color:var(--primary)}.sw-form{display:flex;flex-direction:column;gap:.7rem;max-width:520px;margin:0 auto}.sw-form input,.sw-form textarea{padding:.8rem;border:1px solid #00000022;border-radius:.5rem;font:inherit}.sw-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem}.sw-gallery img{width:100%;border-radius:.5rem}details{max-width:640px;margin:.5rem auto;border:1px solid #0000000d;border-radius:.5rem;padding:.4rem .8rem}summary{cursor:pointer;font-weight:600}footer{padding:2.4rem 0;text-align:center;color:#475569;border-top:1px solid #0000000f}footer a{color:var(--primary);font-weight:600}@media(max-width:560px){.nav a.link{display:none}}</style>
+<style>:root{--primary:${primary};--accent:${accent};--ink:${ink};--bg:#ffffff;--font-heading:${fHeading ? `'${fHeading}',` : ''}system-ui,sans-serif;--font-body:${fBody ? `'${fBody}',` : ''}system-ui,sans-serif}*{box-sizing:border-box}body{margin:0;font:16px/1.6 var(--font-body);color:var(--ink);background:var(--bg)}h1,h2,h3,.brand{font-family:var(--font-heading)}a{color:var(--primary)}.wrap{max-width:1040px;margin:0 auto;padding:0 20px}.narrow{max-width:720px}header{position:sticky;top:0;background:#fffffff2;border-bottom:1px solid #0000000f;z-index:10}.nav{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;max-width:1040px;margin:0 auto}.brand{font-weight:800;color:var(--primary);text-decoration:none}.nav a.link{margin-left:18px;text-decoration:none;color:var(--ink);font-weight:600}.btn{display:inline-block;background:var(--accent);color:#fff;padding:.8rem 1.4rem;border-radius:.6rem;text-decoration:none;font-weight:700;border:0;cursor:pointer;font:inherit}.btn.primary{background:var(--primary)}.hero{padding:5.5rem 0 4rem;text-align:center}.hero h1{font-size:clamp(2rem,5vw,3.4rem);margin:.4rem 0;color:var(--primary)}.hero .tag{font-size:1.2rem;opacity:.85;margin-bottom:1rem}.cta-row{display:flex;gap:.8rem;justify-content:center;flex-wrap:wrap;margin-top:1rem}.hero.image-hero{background-size:cover;background-position:center;color:#fff;padding:7rem 0}.hero.image-hero h1,.hero.image-hero a{color:#fff}.hero.image-hero .tag{opacity:.95}.hero.split-hero{padding:4rem 0;text-align:left}.hero.split-hero .wrap.split{display:grid;grid-template-columns:1.1fr 1fr;gap:2.4rem;align-items:center;max-width:1100px}.hero.split-hero .cta-row{justify-content:flex-start}.hero-img{min-height:280px;border-radius:1rem;background-size:cover;background-position:center;background-color:#f1f5f9}@media(max-width:720px){.hero.split-hero .wrap.split{grid-template-columns:1fr}.hero.split-hero{text-align:center}.hero.split-hero .cta-row{justify-content:center}}section{padding:3.2rem 0}section.alt{background:#f8fafc}.cta-band{text-align:center;background:#f1f5f9}h2{font-size:1.8rem;color:var(--primary);text-align:center;margin-bottom:1.4rem}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.2rem}.card{background:#fff;border:1px solid #0000000d;border-radius:.9rem;padding:1.4rem;margin:0;overflow:hidden}.card-img{width:calc(100% + 2.8rem);margin:-1.4rem -1.4rem .9rem;display:block;aspect-ratio:16/10;object-fit:cover}.ic{width:40px;height:40px;border-radius:.6rem;background:var(--primary);color:#fff;display:grid;place-items:center;font-weight:800;margin-bottom:.6rem}.price{font-weight:700;color:var(--accent)}.prose{max-width:720px;margin:0 auto}.prose p{margin:.6rem 0}.info{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1.2rem 0}.box{background:#fff;border:1px solid #0000000d;border-radius:.8rem;padding:1.1rem;text-align:center}.box b{display:block;color:var(--primary)}.sw-form{display:flex;flex-direction:column;gap:.7rem;max-width:520px;margin:0 auto}.sw-form input,.sw-form textarea{padding:.8rem;border:1px solid #00000022;border-radius:.5rem;font:inherit}.sw-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem}.sw-gallery img{width:100%;border-radius:.5rem}details{max-width:640px;margin:.5rem auto;border:1px solid #0000000d;border-radius:.5rem;padding:.4rem .8rem}summary{cursor:pointer;font-weight:600}footer{padding:2.4rem 0;text-align:center;color:#475569;border-top:1px solid #0000000f}footer a{color:var(--primary);font-weight:600}@media(max-width:560px){.nav a.link{display:none}}</style>
 </head>
 <body>
 <header><nav class="nav"><a class="brand" href="#top">${name}</a><div><a class="link" href="#services">Services</a><a class="link" href="#about">About</a><a class="link" href="#contact">Contact</a>${cfg.contact?.phone ? `<a class="btn primary" href="tel:${esc(String(cfg.contact.phone).replace(/[^0-9+]/g, ''))}">Call Now</a>` : ''}</div></nav></header>
@@ -216,8 +247,11 @@ const NEEDS_CONFIG = { 'online-ordering': ['url'], reservations: ['url'], bookin
 
 // ---------- main build ----------
 
-export function buildSite(slug, { outDir = 'dist', force = false } = {}) {
-  const clientDir = resolve(ROOT, 'clients', slug);
+export function buildSite(slug, { outDir = 'dist', force = false, clientDir } = {}) {
+  // clientDir override: lets a non-client source directory (e.g. a demo's demos/<slug>/_source/) go
+  // through this exact same real-content-only renderer/addon/validation pipeline. Defaults to today's
+  // behavior (clients/<slug>/) when omitted — fully backward compatible.
+  clientDir = clientDir || resolve(ROOT, 'clients', slug);
   const cfgPath = resolve(clientDir, 'brand', 'brand.config.json');
   if (!existsSync(cfgPath)) throw new Error(`No brand.config.json for "${slug}" (expected ${cfgPath}). Run /new-client first.`);
   const cfg = JSON.parse(readFileSync(cfgPath, 'utf8'));
@@ -247,13 +281,18 @@ export function buildSite(slug, { outDir = 'dist', force = false } = {}) {
   const sections = (theme.defaultSections || []).map(name => {
     const fn = SECTION_RENDERERS[name];
     if (!fn) { warnings.push(`unknown theme section "${name}" — skipped`); return ''; }
-    const html = fn(cfg, content);
+    const html = fn(cfg, content, theme);
     if (!html) warnings.push(`section "${name}" skipped — no real content supplied`);
     else renderedSections.add(name);
     return html;
   }).filter(Boolean).join('\n');
 
-  let html = shell({ cfg, sectionsHtml: sections + renderFooter(cfg) });
+  // Footer is already in every theme's defaultSections (rendered via SECTION_RENDERERS.Footer above) —
+  // this used to ALSO append renderFooter(cfg) unconditionally here, rendering it twice on every real
+  // build. Pre-existing bug, only caught now because no client site had ever actually been built+viewed
+  // (clients/repair-it-roofing, for instance, has a placeholder brand.config.json that's never passed
+  // validate() without --force). Fixed: render sections as-is, no redundant extra footer.
+  let html = shell({ cfg, sectionsHtml: sections, theme });
 
   // packages/addons ships some "native" snippets with HARDCODED PLACEHOLDER content (fake menu items like
   // "Signature Dish $18", fake hours, stock photos, generic FAQ text) — correct for a marketing demo, but
@@ -319,14 +358,18 @@ export function buildSite(slug, { outDir = 'dist', force = false } = {}) {
 
 // ---------- CLI ----------
 
-const isMain = (() => { try { return import.meta.url === `file://${process.argv[1]}`; } catch { return false; } })();
+// Compares real resolved paths, not raw strings — the previous `import.meta.url === 'file://'+argv[1]`
+// silently never matched when invoked with a relative path (e.g. `node packages/site-builder/src/build.mjs`,
+// which is exactly how the "build:site" npm script itself invokes it), so the CLI block below never ran.
+const isMain = (() => { try { return fileURLToPath(import.meta.url) === resolve(process.argv[1]); } catch { return false; } })();
 if (isMain) {
   const av = process.argv.slice(2);
   const slug = av.find(a => !a.startsWith('--'));
   const opt = (k, d = null) => { const i = av.indexOf('--' + k); return i >= 0 && av[i + 1] && !av[i + 1].startsWith('--') ? av[i + 1] : d; };
-  if (!slug) { console.error('Usage: build.mjs "<slug>" [--out dist] [--force]'); process.exit(1); }
+  if (!slug) { console.error('Usage: build.mjs "<slug>" [--out dist] [--force] [--client-dir <path>]'); process.exit(1); }
   try {
-    const r = buildSite(slug, { outDir: opt('out', 'dist'), force: av.includes('--force') });
+    const clientDirOpt = opt('client-dir');
+    const r = buildSite(slug, { outDir: opt('out', 'dist'), force: av.includes('--force'), clientDir: clientDirOpt ? resolve(clientDirOpt) : undefined });
     console.log(`\n✅ Built "${r.businessName}" (theme: ${r.theme}) → ${r.distDir}`);
     if (r.applied.length) console.log(`   Add-ons applied: ${r.applied.join(', ')}`);
     if (r.skipped.length) { console.log('   Add-ons needing attention:'); r.skipped.forEach(s => console.log(`     • ${s.id} — ${s.reason}`)); }

@@ -79,6 +79,10 @@ const MIGRATIONS = [
   // Phase 3: marketing-kit (chat-driven skill, no CLI script — flag + filesystem detection)
   "ALTER TABLE deals ADD COLUMN needs_marketing_kit INTEGER NOT NULL DEFAULT 0",
   "ALTER TABLE deals ADD COLUMN marketing_kit_path TEXT",
+  // Demo-generation overhaul: full/interactive /demo-site is Claude-authored (screenshot + real copy), same
+  // flag+filesystem-detection pattern as marketing-kit above (the board can't run it, only flag + detect).
+  "ALTER TABLE deals ADD COLUMN needs_full_demo INTEGER NOT NULL DEFAULT 0",
+  "ALTER TABLE deals ADD COLUMN demo_quality TEXT", // 'quick' (demo-gen.mjs) | 'full' (/demo-site interactive) | null
 ];
 for (const sql of MIGRATIONS) { try { db.exec(sql); } catch (e) { if (!/duplicate column/i.test(e.message)) throw e; } }
 
@@ -88,7 +92,7 @@ const DEAL_FIELDS = ['business_line', 'name', 'contact_name', 'phone', 'email', 
   'needs_security_gate', 'invoiced_amount', 'detected_booking_system', 'platform_presence', 'platforms_wanted',
   'parity_baseline_path', 'parity_status', 'parity_result', 'parity_checked_at',
   'invoice_number', 'invoice_status', 'invoice_path', 'invoice_items', 'invoice_due_date', 'invoice_paid_at',
-  'needs_marketing_kit', 'marketing_kit_path'];
+  'needs_marketing_kit', 'marketing_kit_path', 'needs_full_demo', 'demo_quality'];
 
 export function listDeals({ businessLine, stage } = {}) {
   let sql = 'SELECT * FROM deals';

@@ -64,6 +64,37 @@ test('full deal lifecycle through the real UI: lead → parity → invoice → p
     await expect(page.locator('.toast:has-text("Saved")')).toBeVisible();
   });
 
+  await test.step('demo generation: flag/check the full (interactive) demo, generate a quick one, then confirm before a quick regen overwrites an existing full demo', async () => {
+    // Flag for the Full (Claude-authored) demo — same flag/detect pattern as marketing-kit below. The
+    // hint shows the raw deal name here (client_slug isn't set until "Start client", below) — same
+    // pre-existing fallback marketing-kit's own hint uses (`deal.client_slug || deal.name`); the server
+    // check itself still resolves the real slug regardless (dealSlug() in routes.mjs).
+    await page.click('button:has-text("Flag for /demo-site (full)")');
+    await expect(page.locator(`code:has-text("${DEAL_NAME}")`)).toBeVisible();
+    await page.click('button:has-text("Check for full demo")');
+    await expect(page.locator('.toast:has-text("Not found")')).toBeVisible();
+
+    // Generate the Quick demo — real demo-gen.mjs subprocess, no full demo exists yet so no confirm needed.
+    await page.click('button:has-text("Generate demo")');
+    await expect(page.locator('.toast:has-text("Generate demo finished")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.filelink:has-text("Demo site (quick)")')).toBeVisible();
+
+    // Simulate a Full demo having since been built for this same slug (its _source/ dir is the marker) —
+    // "Check for full demo" should now find it.
+    const sourceDir = resolve(ROOT, 'demos', SLUG, '_source');
+    mkdirSync(sourceDir, { recursive: true });
+    await page.click('button:has-text("Check for full demo")');
+    await expect(page.locator('.section-title:has-text("High-quality demo") ~ p:has-text("Ready")')).toBeVisible();
+    await expect(page.locator('.filelink:has-text("Demo site (full ✨)")')).toBeVisible();
+
+    // Regenerating the Quick demo now must ask before overwriting the Full one at the same path.
+    page.once('dialog', dialog => dialog.accept());
+    await page.click('button:has-text("Generate demo")');
+    await expect(page.locator('.toast:has-text("Generate demo finished")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.filelink:has-text("Demo site (quick)")')).toBeVisible();
+    await page.screenshot({ path: resolve(SHOTS, '01b-demo-generation.png') });
+  });
+
   await test.step('parity: capture the old site from the drawer', async () => {
     await expect(page.locator('.section-title:has-text("Parity vs. old site")')).toBeVisible();
     await page.click('button:has-text("Capture old site")');

@@ -53,6 +53,7 @@ export async function openDrawer(dealId, { onClose, onChanged }) {
     // carry a client_slug too (set when its listing kit is generated), so gate on business_line as well.
     if (deal.business_line === 'website' && deal.client_slug) body.appendChild(renderAddonsSection(deal, refresh));
     if (['won', 'delivered', 'invoiced'].includes(deal.stage)) body.appendChild(renderInvoiceSection(deal, refresh));
+    if (deal.business_line === 'website') body.appendChild(renderFullDemoSection(deal, refresh));
     body.appendChild(renderMarketingKitSection(deal, refresh));
     body.appendChild(renderActivity(deal, refresh));
     const delRow = el(`<div class="divider"></div>`);
@@ -281,6 +282,41 @@ function openInvoiceModal(deal, refresh) {
 
 // ---------- marketing kit (chat-driven /marketing-kit skill — flag it, then detect the output) ----------
 
+// Quick demo (batch, unattended) writes to the same demos/<slug>/index.html a Full (interactive)
+// /demo-site might already occupy — the server 409s with needsConfirm rather than silently overwriting
+// real authored work; this asks once and retries with force:true only if confirmed.
+async function generateQuickDemoConfirmingOverwrite(dealId) {
+  try {
+    return await api.generateDemo(dealId);
+  } catch (err) {
+    if (err.data?.needsConfirm && confirm(err.message + ' Continue?')) return api.generateDemo(dealId, { force: true });
+    throw err;
+  }
+}
+
+// The high-quality /demo-site Full mode is a chat-driven skill (screenshots a real page, Claude writes
+// real copy) — same "the board can only flag + detect it, not run it" pattern as marketing-kit below.
+function renderFullDemoSection(deal, refresh) {
+  const wrap = el(`<div></div>`);
+  wrap.appendChild(el(`<div class="section-title">High-quality demo (/demo-site Full mode)</div>`));
+  if (deal.demo_quality === 'full') {
+    wrap.appendChild(el(`<p class="hint" style="margin:0">Ready — see "Demo site" below.</p>`));
+    return wrap;
+  }
+  if (deal.needs_full_demo) {
+    const slug = deal.client_slug || deal.name;
+    wrap.appendChild(el(`<p class="hint" style="margin:0 0 .5rem">Flagged — run <code>/demo-site ${esc(slug)}</code> (Full mode) in Claude Code chat, then check back here.</p>`));
+    const btn = el(`<button class="btn sm">Check for full demo</button>`);
+    btn.addEventListener('click', () => runSimpleAction(btn, () => api.checkFullDemo(deal.id), refresh));
+    wrap.appendChild(btn);
+    return wrap;
+  }
+  const btn = el(`<button class="btn sm">Flag for /demo-site (full)</button>`);
+  btn.addEventListener('click', () => runSimpleAction(btn, () => api.flagFullDemo(deal.id), refresh));
+  wrap.appendChild(btn);
+  return wrap;
+}
+
 function renderMarketingKitSection(deal, refresh) {
   const wrap = el(`<div></div>`);
   wrap.appendChild(el(`<div class="section-title">Marketing kit</div>`));
@@ -316,7 +352,7 @@ function renderFiles(deal) {
   const links = [
     ['opportunityReport', 'Opportunity report', deal.opportunity_report_path],
     ['parityBrief', 'Parity brief', deal.parity_baseline_path],
-    ['demo', 'Demo site', deal.demo_path],
+    ['demo', deal.demo_quality === 'full' ? 'Demo site (full ✨)' : deal.demo_quality === 'quick' ? 'Demo site (quick)' : 'Demo site', deal.demo_path],
     ['proposal', deal.business_line === 'lodging' ? 'Proposal' : 'Pitch packet', deal.proposal_path],
     ['dist', 'Built site', deal.dist_path],
     [null, 'Live site', deal.live_url],
@@ -377,7 +413,7 @@ function renderActions(deal, refresh) {
   if (deal.business_line === 'website') {
     if (deal.stage !== 'won' && deal.stage !== 'delivered' && deal.stage !== 'invoiced') {
       addBtn('Scan opportunities', () => api.scanOpportunities(deal.id));
-      addBtn('Generate demo', () => api.generateDemo(deal.id));
+      addBtn('Generate demo', () => generateQuickDemoConfirmingOverwrite(deal.id));
       addBtn('Generate pitch packet', () => api.generateBrief(deal.id));
     }
     if (!deal.client_slug) {

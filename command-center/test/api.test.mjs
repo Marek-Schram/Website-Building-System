@@ -23,7 +23,7 @@ const cookies = {};
 // Every repo-level artifact this suite might create, namespaced under one prefix so cleanup can't miss
 // anything and can never touch a real client's files.
 const SLUG_PREFIX = 'vitest-cc-';
-const cleanupDirs = ['clients', 'dist', 'parity', 'invoices/out', 'marketing-toolkit', 'proposals/out', 'listing-kit/out'];
+const cleanupDirs = ['clients', 'dist', 'parity', 'demos', 'invoices/out', 'marketing-toolkit', 'proposals/out', 'listing-kit/out'];
 
 function cleanupArtifacts() {
   for (const dir of cleanupDirs) {
@@ -365,6 +365,83 @@ describe('marketing kit', () => {
   it('blocks traversal even when the relative path resolves outside via ..', async () => {
     const { status } = await req('GET', `/deals/${dealId}/marketing-kit/file?path=${encodeURIComponent('../' + slug + '-decoy/secret.md')}`);
     expect(status).toBe(400);
+  });
+});
+
+// ---------- demo generation: quick (real demo-gen.mjs run) + full (chat-driven, flag + filesystem
+// detection — same pattern as marketing kit above) ----------
+
+describe('generate-demo (quick)', () => {
+  it('runs the real script and marks demo_quality as quick', async () => {
+    const slug = `${SLUG_PREFIX}quick-demo-co`;
+    const created = await req('POST', '/deals', { business_line: 'website', name: slug, industry: 'plumber' });
+    const dealId = created.data.id;
+    const { status, data } = await req('POST', `/deals/${dealId}/generate-demo`);
+    expect(status).toBe(202);
+    await waitForJob(data.jobId);
+    const deal = (await req('GET', `/deals/${dealId}`)).data;
+    expect(deal.demo_quality).toBe('quick');
+    expect(deal.demo_path).toBe(`demos/${slug}/index.html`);
+    expect(existsSync(resolve(ROOT, deal.demo_path))).toBe(true);
+  });
+
+  it('409s with needsConfirm instead of silently overwriting an existing Full demo, then succeeds once forced', async () => {
+    const slug = `${SLUG_PREFIX}overwrite-guard-co`;
+    const created = await req('POST', '/deals', { business_line: 'website', name: slug, industry: 'plumber' });
+    const dealId = created.data.id;
+    // Simulate a Full demo already sitting at this path (its _source/ dir is the marker).
+    mkdirSync(resolve(ROOT, 'demos', slug, '_source'), { recursive: true });
+
+    const blocked = await req('POST', `/deals/${dealId}/generate-demo`);
+    expect(blocked.status).toBe(409);
+    expect(blocked.data.needsConfirm).toBe(true);
+    expect((await req('GET', `/deals/${dealId}`)).data.demo_quality).not.toBe('quick'); // job never ran
+
+    const forced = await req('POST', `/deals/${dealId}/generate-demo`, { force: true });
+    expect(forced.status).toBe(202);
+    await waitForJob(forced.data.jobId);
+    const deal = (await req('GET', `/deals/${dealId}`)).data;
+    expect(deal.demo_quality).toBe('quick');
+    // Regression: the stale _source/ marker must be cleaned up, or a later "Check for full demo" would
+    // false-positive on a full demo that's actually just been overwritten by this quick one.
+    expect(existsSync(resolve(ROOT, 'demos', slug, '_source'))).toBe(false);
+  });
+});
+
+describe('full demo (flag/detect)', () => {
+  let dealId;
+  const slug = `${SLUG_PREFIX}full-demo-co`;
+
+  it('sets up a deal and flags it', async () => {
+    const created = await req('POST', '/deals', { business_line: 'website', name: slug });
+    dealId = created.data.id;
+    const { data } = await req('POST', `/deals/${dealId}/full-demo/flag`);
+    expect(data.slug).toBe(slug);
+    expect((await req('GET', `/deals/${dealId}`)).data.needs_full_demo).toBe(1);
+  });
+
+  it('honestly reports nothing found before the skill has run', async () => {
+    const { data } = await req('POST', `/deals/${dealId}/full-demo/check`);
+    expect(data.found).toBe(false);
+    expect((await req('GET', `/deals/${dealId}`)).data.needs_full_demo).toBe(1); // still flagged
+  });
+
+  it('does not count a quick demo (index.html with no _source/) as a completed full demo', async () => {
+    mkdirSync(resolve(ROOT, 'demos', slug), { recursive: true });
+    writeFileSync(resolve(ROOT, 'demos', slug, 'index.html'), '<html></html>');
+    const { data } = await req('POST', `/deals/${dealId}/full-demo/check`);
+    expect(data.found).toBe(false);
+  });
+
+  it('finds it once both index.html AND _source/ exist, and clears the flag', async () => {
+    mkdirSync(resolve(ROOT, 'demos', slug, '_source'), { recursive: true });
+    const { data } = await req('POST', `/deals/${dealId}/full-demo/check`);
+    expect(data.found).toBe(true);
+
+    const deal = (await req('GET', `/deals/${dealId}`)).data;
+    expect(deal.needs_full_demo).toBe(0);
+    expect(deal.demo_quality).toBe('full');
+    expect(deal.demo_path).toBe(`demos/${slug}/index.html`);
   });
 });
 

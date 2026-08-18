@@ -8,7 +8,18 @@ Goal: the new site keeps the OLD site's look + every feature, and adds improveme
 at a lower cost.
 
 ## Step 1 — Capture the current site
-`node packages/parity/src/capture.mjs <old-url-or-html> --slug <slug>` → writes parity/<slug>/:
+**Preferred: `node packages/parity/src/capture-browser.mjs <old-url> --slug <slug>`** — renders the page in
+a real browser, so it correctly reads colors/fonts from computed styles and contact info from real DOM
+elements instead of raw-source regex. Fixes real, confirmed data corruption on JS-heavy/platform-builder
+sites (Wix, Squarespace, Webflow, React SPAs) — verified 2026-08-18 against a real Wix site where the
+regex-only path mistook a Wix analytics ID for the phone number and a Sentry tracking-pixel address for the
+email (see `memory/lessons-learned.md`). Also captures real screenshots + downloads real photos/logo to
+`parity/<slug>/assets/` and `screenshots/`, useful for both this flow and `/demo-site`'s Full mode.
+
+Fallback for simple static (non-JS-rendered) sites where speed matters more than that reliability:
+`node packages/parity/src/capture.mjs <old-url-or-html> --slug <slug>` (no browser, fetch+regex only).
+
+Either way, writes parity/<slug>/:
 - baseline.json (style, structure, functionality+providers, contact)
 - baseline.md (a share-worthy parity brief)
 - brand.seed.json (a brand.config.json starter with the OLD colors/fonts/contact/addons)

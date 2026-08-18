@@ -20,7 +20,12 @@ async function req(method, path, body) {
     if (path !== '/login') onUnauthorized();
     throw new ApiError(data?.error || 'Not signed in');
   }
-  if (!res.ok) throw new ApiError(data?.error || `Request failed (${res.status})`);
+  if (!res.ok) {
+    const err = new ApiError(data?.error || data?.message || `Request failed (${res.status})`);
+    err.status = res.status;
+    err.data = data; // preserves structured fields a caller may need (e.g. generateDemo's 409 needsConfirm)
+    throw err;
+  }
   return data;
 }
 
@@ -44,7 +49,7 @@ export const api = {
   jobResult: id => req('GET', `/jobs/${id}/result`),
 
   scanOpportunities: id => req('POST', `/deals/${id}/scan-opportunities`),
-  generateDemo: id => req('POST', `/deals/${id}/generate-demo`),
+  generateDemo: (id, { force } = {}) => req('POST', `/deals/${id}/generate-demo`, force ? { force: true } : undefined),
   generateBrief: id => req('POST', `/deals/${id}/generate-brief`),
   checkBookingPresence: id => req('POST', `/deals/${id}/check-booking-presence`),
   proposeLodging: (id, body) => req('POST', `/deals/${id}/propose-lodging`, body),
@@ -71,6 +76,8 @@ export const api = {
 
   flagMarketingKit: id => req('POST', `/deals/${id}/marketing-kit/flag`),
   checkMarketingKit: id => req('POST', `/deals/${id}/marketing-kit/check`),
+  flagFullDemo: id => req('POST', `/deals/${id}/full-demo/flag`),
+  checkFullDemo: id => req('POST', `/deals/${id}/full-demo/check`),
   marketingKitFiles: id => req('GET', `/deals/${id}/marketing-kit/files`),
 
   generateInvoice: (id, body) => req('POST', `/deals/${id}/invoice/generate`, body),

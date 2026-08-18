@@ -59,3 +59,41 @@
   If accurate platform-presence is ever needed again, the real fix is a proper search API (Bing Web Search
   API / Google Custom Search JSON API), not more scraping — see the "Switch to a real search API" option
   that was declined this session in favor of staying keyless.
+- 2026-08-18: A batch of real, previously-undiscovered bugs found by actually running/screenshotting things
+  during the demo-generation overhaul, instead of trusting the code by inspection:
+  - `strip()` (industry classification) didn't exclude `<style>`/`<script>` block CONTENTS, only their
+    tags — raw CSS/JS text leaked into "visible page text." Confirmed on a real site: a Wix CSS custom
+    property `var(--menu-direction)` and Wix's own generic a11y boilerplate ("navigate through the menu
+    items") both satisfied a naive `menu` substring check and misclassified a roofing company as a
+    restaurant. Fixed by stripping style/script contents first (classify.mjs) AND dropping bare "menu" as a
+    restaurant signal entirely (proven ambiguous between "food menu" and "nav menu" with no reliable way to
+    tell from keywords alone — the other signals, restaurant/dine/reservation/entree/appetizer, are specific
+    enough alone).
+  - `packages/site-builder/src/build.mjs`'s CLI entry point (`import.meta.url === 'file://'+argv[1]`)
+    silently never matched when invoked with a relative path — which is exactly how the `build:site` npm
+    script itself invokes it. No client site had ever actually been built via the CLI to notice. Same bug
+    existed in the (also newly-CLI-tested) `demo-gen.mjs`. Fix: compare `fileURLToPath(import.meta.url)`
+    against `resolve(argv[1])` — real resolved paths, not raw strings.
+  - `build.mjs` rendered the page Footer TWICE on every real build (once via the theme's `defaultSections`
+    list, once via an unconditional extra `renderFooter()` call) — invisible in the existing test suite
+    because `<footer>` has no `id` attribute, and the suite's duplicate-check only covers ids. Only caught
+    by actually screenshotting a built page.
+  - `packages/parity`'s regex-based capture (fetch + raw HTML, no rendering) on a real Wix site: mistook a
+    Wix analytics ID for the phone number, a Sentry tracking-pixel address for the email, and missed a
+    text-based logo (correctly — it wasn't a graphic — but a naive "grab the first inline `<svg>` in the
+    header" fallback instead wrongly grabbed a 10×10 nav-dropdown chevron icon). Fixed by adding a real
+    headless-browser capture (`capture-browser.mjs`/`extract-dom.mjs`) that reads computed styles and real
+    DOM elements instead of regex-on-source, plus a size/label filter on the inline-svg-logo fallback.
+  - `command-center/test/playwright.config.mjs` had two environment-specific bugs that made the documented
+    `npm run test:command-center` fail outright in this environment: (1) `webServer.command` interpolated
+    an unquoted absolute path into a shell command string — this repo's own directory name contains a space
+    ("Website Building/..."), so the shell split it into multiple argv entries and node failed with
+    "Cannot find module" on the truncated fragment; (2) `launchOptions.executablePath` was hardcoded to
+    `/opt/pw-browsers/chromium`, which doesn't exist in this environment (Playwright's default install
+    location, `~/.cache/ms-playwright/...`, does, and works fine). Fixed: quote the path in the command
+    string, and only use the pinned executablePath if it actually exists on disk, else let Playwright fall
+    back to its own default resolution.
+  General takeaway: several of these had decent-looking test coverage or had simply never been exercised
+  for real (no client site had ever been built+viewed; no e2e run had ever succeeded from this exact
+  checkout path) — "the code looks right" and "the tests pass" are not the same claim as "someone actually
+  ran this and looked at the result." Screenshot real output and run real CLIs before trusting them.

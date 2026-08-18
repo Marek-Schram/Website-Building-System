@@ -19,6 +19,7 @@
     "test:human": "node packages/testing/harness/human-test.mjs",
     "test:unit": "vitest run",
     "test:e2e": "playwright test packages/testing/e2e",
+    "test:parity": "playwright test --config=packages/parity/test/playwright.config.mjs",
     "test:command-center": "vitest run command-center/test/api.test.mjs && playwright test --config=command-center/test/playwright.config.mjs",
     "deadcode": "knip",
     "brief": "node packages/prospect-brief/src/brief.mjs",

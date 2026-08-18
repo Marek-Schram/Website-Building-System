@@ -1,1 +1,12 @@
-{ "name":"harvest","description":"Warm & artisan","defaultSections":["Hero","Services","About","Testimonials","Hours","ContactForm","Footer"] }
+{
+  "name": "harvest",
+  "description": "Warm & artisan",
+  "defaultSections": ["Hero", "Services", "About", "Testimonials", "Hours", "ContactForm", "Footer"],
+  "layout": "image-hero",
+  "cardStyle": "photo",
+  "fonts": {
+    "heading": "Lora",
+    "body": "Inter",
+    "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;600&display=swap"
+  }
+}

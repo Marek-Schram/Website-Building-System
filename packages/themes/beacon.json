@@ -1,1 +1,12 @@
-{ "name":"beacon","description":"Clean & professional","defaultSections":["Hero","Services","About","Testimonials","Hours","ContactForm","Footer"] }
+{
+  "name": "beacon",
+  "description": "Clean & professional",
+  "defaultSections": ["Hero", "Services", "About", "Testimonials", "Hours", "ContactForm", "Footer"],
+  "layout": "text-hero",
+  "cardStyle": "icon-circle",
+  "fonts": {
+    "heading": "Inter",
+    "body": "Inter",
+    "googleFontsUrl": "https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+  }
+}
